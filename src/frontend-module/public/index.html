@@ -325,6 +325,30 @@ body::after {
 .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .table-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
 .table-title { font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 600; color: #fff; letter-spacing: 1px; }
+
+/* Filter toggle */
+.filter-toggle {
+  display: flex; align-items: center;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 4px; overflow: hidden;
+}
+.filter-opt {
+  font-family: 'Share Tech Mono', monospace; font-size: 9px;
+  letter-spacing: 1px; padding: 4px 10px; cursor: pointer;
+  color: var(--muted); transition: all 0.15s;
+}
+.filter-opt.active { background: rgba(232,66,10,0.15); color: #fb8c6a; }
+.filter-toggle {
+  display: flex; align-items: center;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 4px; overflow: hidden;
+}
+.filter-opt {
+  padding: 4px 12px; font-family: 'Share Tech Mono', monospace;
+  font-size: 9px; letter-spacing: 1px; cursor: pointer;
+  color: var(--muted); transition: all 0.15s;
+}
+.filter-opt.active { background: rgba(232,66,10,0.15); color: #fb8c6a; }
 .btn-new {
   display: flex; align-items: center; gap: 6px;
   padding: 7px 16px; background: rgba(232,66,10,0.1);
@@ -344,11 +368,20 @@ tr:hover td { background: rgba(255,255,255,0.01); }
 .pill { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1px; padding: 3px 9px; border-radius: 3px; }
 .pill-on  { background: rgba(34,197,94,0.1);  color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
 .pill-off { background: rgba(74,96,128,0.1);  color: var(--muted);  border: 1px solid var(--border2); }
-.last-trig { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); }
+.filter-toggle {
+  display: flex; background: var(--surface);
+  border: 1px solid var(--border2); border-radius: 4px; overflow: hidden;
+}
+.filter-opt {
+  font-family: 'Share Tech Mono', monospace; font-size: 9px;
+  letter-spacing: 1px; padding: 4px 10px; cursor: pointer;
+  color: var(--muted); transition: all 0.15s;
+}
+.filter-opt.active { background: rgba(232,66,10,0.15); color: #fb8c6a; }
 .last-trig-action { font-size: 9px; color: var(--teal); margin-top: 2px; }
 .action-btns { display: flex; gap: 6px; }
 .icon-btn { width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--border2); background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; transition: all 0.15s; }
-.icon-btn:hover { border-color: var(--blue); color: var(--blue2); background: rgba(14,165,233,0.08); }
+.icon-btn:hover { border-color: var(--accent); color: #fb8c6a; background: rgba(232,66,10,0.08); }
 .icon-btn.del:hover { border-color: var(--red); color: var(--red); background: rgba(239,68,68,0.08); }
 
 /* MODAL */
@@ -631,7 +664,12 @@ tr:hover td { background: rgba(255,255,255,0.01); }
       </div>
       <div class="table-wrap">
         <div class="table-header">
-          <div class="table-title">Active Rules</div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <div class="filter-toggle" id="filterToggle" onclick="toggleFilter()">
+              <div class="filter-opt active" id="filterAll">ALL</div>
+              <div class="filter-opt" id="filterActive">ACTIVE ONLY</div>
+            </div>
+          </div>
           <div class="btn-new" onclick="openModal()">+ NEW RULE</div>
         </div>
         <table>
@@ -685,7 +723,7 @@ tr:hover td { background: rgba(255,255,255,0.01); }
       <div class="form-row">
         <div class="form-group" style="flex:2">
           <div class="form-label">Sensor</div>
-          <select class="form-select" id="ruleSensor" onchange="updatePreview()">
+          <select class="form-select" id="ruleSensor" onchange="onSensorChange(); updatePreview()">
             <option value="greenhouse_temperature">greenhouse_temperature</option>
             <option value="entrance_humidity">entrance_humidity</option>
             <option value="co2_hall">co2_hall</option>
@@ -695,6 +733,10 @@ tr:hover td { background: rgba(255,255,255,0.01); }
             <option value="air_quality_pm25">air_quality_pm25</option>
             <option value="air_quality_voc">air_quality_voc</option>
           </select>
+        </div>
+        <div class="form-group" style="flex:1.5">
+          <div class="form-label">Metric</div>
+          <select class="form-select" id="ruleAttribute" onchange="updatePreview()"></select>
         </div>
         <div class="form-group" style="flex:0.8">
           <div class="form-label">Operator</div>
@@ -1239,12 +1281,21 @@ function setConnectionStatus(online) {
 }
 
 // ─── LOAD RULES ───────────────────────────
+let showActiveOnly = false;
+
+function toggleFilter() {
+  showActiveOnly = !showActiveOnly;
+  document.getElementById('filterAll').classList.toggle('active', !showActiveOnly);
+  document.getElementById('filterActive').classList.toggle('active', showActiveOnly);
+  loadRules();
+}
+
 async function loadRules() {
   if (MOCK_MODE) { renderRules(MOCK_RULES); return; }
   try {
     const res  = await fetch('/api/rules');
     const rules = await res.json();
-    renderRules(rules);
+    renderRules(showActiveOnly ? rules.filter(r => r.enabled !== false) : rules);
   } catch (e) {
     console.error('Failed to load rules', e);
   }
@@ -1252,16 +1303,17 @@ async function loadRules() {
 
 // ─── RENDER RULES TABLE ───────────────────
 function renderRules(rules) {
+  const toRender = showActiveOnly ? rules.filter(r => r.enabled !== false) : rules;
   const tbody = document.getElementById('rulesTable');
   tbody.innerHTML = '';
 
-  if (rules.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px;font-family:'Share Tech Mono',monospace;font-size:12px">No rules defined — create your first rule</td></tr>`;
+  if (toRender.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px;font-family:'Share Tech Mono',monospace;font-size:12px">${showActiveOnly ? 'No active rules' : 'No rules defined — create your first rule'}</td></tr>`;
     return;
   }
 
-  rules.forEach(rule => {
-    const enabled = rule.enabled !== false; // default true if field missing
+  toRender.forEach(rule => {
+    const enabled = rule.enabled !== false;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>
@@ -1301,6 +1353,7 @@ function openModal(rule) {
   document.getElementById('ruleThreshold').value = '';
   document.getElementById('ruleActuator').value = 'cooling_fan';
   document.getElementById('ruleAction').value = 'ON';
+  onSensorChange();
   updatePreview();
   document.getElementById('modalBackdrop').classList.add('open');
 }
@@ -1311,6 +1364,8 @@ function editRule(rule) {
   document.getElementById('editRuleId').value = rule.id;
   document.getElementById('ruleName').value = rule.name || '';
   document.getElementById('ruleSensor').value = rule.sensor;
+  onSensorChange();
+  document.getElementById('ruleAttribute').value = rule.attribute || '';
   document.getElementById('ruleOperator').value = rule.operator;
   document.getElementById('ruleThreshold').value = rule.threshold;
   document.getElementById('ruleActuator').value = rule.actuator;
@@ -1319,27 +1374,55 @@ function editRule(rule) {
   document.getElementById('modalBackdrop').classList.add('open');
 }
 
-function closeModal() {
-  document.getElementById('modalBackdrop').classList.remove('open');
-  editingRuleId = null;
-}
-
-// AU-07: live rule preview
 function updatePreview() {
   const sensor    = document.getElementById('ruleSensor')?.value || '—';
+  const attribute = document.getElementById('ruleAttribute')?.value || '—';
   const operator  = document.getElementById('ruleOperator')?.value || '—';
   const threshold = document.getElementById('ruleThreshold')?.value || '—';
   const actuator  = document.getElementById('ruleActuator')?.value || '—';
   const action    = document.getElementById('ruleAction')?.value || '—';
   document.getElementById('rulePreview').textContent =
-    `IF ${sensor} ${operator} ${threshold} THEN set ${actuator} to ${action}`;
+    `IF ${sensor}.${attribute} ${operator} ${threshold} THEN set ${actuator} to ${action}`;
+}
+
+function closeModal() {
+  document.getElementById('modalBackdrop').classList.remove('open');
+  editingRuleId = null;
 }
 
 // ─── SAVE RULE (AU-01 / AU-02) ────────────
+// Sensor → all available metrics
+const SENSOR_METRICS = {
+  greenhouse_temperature: ['temperature_c'],
+  entrance_humidity:      ['humidity_pct'],
+  co2_hall:               ['co2_ppm'],
+  hydroponic_ph:          ['ph'],
+  water_tank_level:       ['level_pct', 'level_liters'],
+  corridor_pressure:      ['pressure_kpa'],
+  air_quality_pm25:       ['pm1_ug_m3', 'pm25_ug_m3', 'pm10_ug_m3'],
+  air_quality_voc:        ['voc_ppb', 'co2e_ppm'],
+  solar_array:            ['power_kw', 'voltage_v', 'current_a', 'cumulative_kwh'],
+  radiation:              ['radiation_uSv_h'],
+  life_support:           ['oxygen_percent'],
+  thermal_loop:           ['temperature_c', 'flow_l_min'],
+  power_bus:              ['voltage_v', 'current_a', 'frequency_hz', 'power_factor'],
+  power_consumption:      ['total_kw', 'lighting_kw', 'hvac_kw', 'equipment_kw'],
+  airlock:                ['cycles_per_hour', 'last_state'],
+};
+
+function onSensorChange() {
+  const sensor = document.getElementById('ruleSensor').value;
+  const metrics = SENSOR_METRICS[sensor] || [];
+  const sel = document.getElementById('ruleAttribute');
+  sel.innerHTML = metrics.map(m => `<option value="${m}">${m}</option>`).join('');
+}
+
 async function saveRule() {
+  const sensor = document.getElementById('ruleSensor').value;
   const rule = {
     name:      document.getElementById('ruleName').value || 'Unnamed rule',
-    sensor:    document.getElementById('ruleSensor').value,
+    sensor,
+    attribute: document.getElementById('ruleAttribute').value,
     operator:  document.getElementById('ruleOperator').value,
     threshold: parseFloat(document.getElementById('ruleThreshold').value),
     actuator:  document.getElementById('ruleActuator').value,
@@ -1368,13 +1451,15 @@ async function saveRule() {
 
     if (res.ok) {
       closeModal();
-      loadRules();
       showToast(editingRuleId ? 'Rule updated' : 'Rule created');
+      await loadRules();
     } else {
-      showToast('Failed to save rule', true);
+      const err = await res.json().catch(() => ({}));
+      showToast('Failed to save rule: ' + (err.error || res.status), true);
     }
   } catch (e) {
-    showToast('Network error', true);
+    console.error('saveRule error:', e);
+    showToast('Network error: ' + e.message, true);
   }
 }
 

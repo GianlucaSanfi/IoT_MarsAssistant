@@ -47,20 +47,17 @@ async function startRabbitMQConsumer() {
       const conn = await amqp.connect(RABBITMQ_URL);
       const channel = await conn.createChannel();
 
-      // --- Telemetry: sensor readings (topic exchange, sensors.normalized) ---
+      // --- Sensor + Telemetry readings (topic exchange) ---
       const telemetryExchange = 'telemetry';
       await channel.assertExchange(telemetryExchange, 'topic', { durable: true });
       const tq = await channel.assertQueue('frontend-telemetry', { exclusive: false, durable: true });
       await channel.bindQueue(tq.queue, telemetryExchange, 'sensors.normalized');
-      await channel.bindQueue(tq.queue, telemetryExchange, 'telemetry.normalized');
-
-      
+      await channel.bindQueue(tq.queue, telemetryExchange, 'telemetry.normalized'); // ← telemetry streams
 
       channel.consume(tq.queue, (msg) => {
         if (msg !== null) {
           try {
             const data = JSON.parse(msg.content.toString());
-            // data = { timestamp, sensor_id, metric, value, unit, status }
             broadcast({ type: 'sensor_data', payload: data });
           } catch (e) {
             console.error('Failed to parse telemetry message:', e);
@@ -87,7 +84,7 @@ async function startRabbitMQConsumer() {
         }
       });
 
-      console.log('[AMQP] Connected. Consuming telemetry and alerts.');
+      console.log('[AMQP] Connected. Consuming sensors, telemetry and alerts.');
 
       conn.on('error', (err) => {
         console.error('[AMQP] Connection error:', err.message);
@@ -114,8 +111,6 @@ app.get('/api/rules', async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM rules ORDER BY id ASC');
     res.json(result.rows);
-    console.log(result, "ciaooooooooooooooo!");
-    ////////////////////////////////////////
   } catch (err) {
     res.status(500).json({ error: 'Database error' });
   }
@@ -132,14 +127,14 @@ app.get('/api/rules/:id', async (req, res) => {
 });
 
 app.post('/api/rules', async (req, res) => {
-  const { sensor, attribute, operator, threshold, actuator, action } = req.body;
+  const { sensor, attribute, operator, threshold, actuator, action, name } = req.body;
   if (!sensor || !attribute || !operator || threshold === undefined || !actuator || !action) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
   try {
     const result = await db.query(
-      'INSERT INTO rules (sensor, attribute, operator, threshold, actuator, action) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-      [sensor, attribute, operator, threshold, actuator, action]
+      'INSERT INTO rules (name, sensor, attribute, operator, threshold, actuator, action) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
+      [name || null, sensor, attribute, operator, threshold, actuator, action]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -149,14 +144,14 @@ app.post('/api/rules', async (req, res) => {
 });
 
 app.put('/api/rules/:id', async (req, res) => {
-  const { sensor, attribute, operator, threshold, actuator, action } = req.body;
+  const { sensor, attribute, operator, threshold, actuator, action, name } = req.body;
   if (!sensor || !attribute || !operator || threshold === undefined || !actuator || !action) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
   try {
     const result = await db.query(
-      'UPDATE rules SET sensor=$1, attribute=$2, operator=$3, threshold=$4, actuator=$5, action=$6 WHERE id=$7 RETURNING *',
-      [sensor, attribute, operator, threshold, actuator, action, req.params.id]
+      'UPDATE rules SET name=$1, sensor=$2, attribute=$3, operator=$4, threshold=$5, actuator=$6, action=$7 WHERE id=$8 RETURNING *',
+      [name || null, sensor, attribute, operator, threshold, actuator, action, req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
@@ -170,6 +165,19 @@ app.delete('/api/rules/:id', async (req, res) => {
     const result = await db.query('DELETE FROM rules WHERE id=$1 RETURNING *', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.patch('/api/rules/:id/toggle', async (req, res) => {
+  try {
+    const result = await db.query(
+      'UPDATE rules SET enabled = NOT enabled WHERE id=$1 RETURNING *',
+      [req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Database error' });
   }
