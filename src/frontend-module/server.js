@@ -84,7 +84,35 @@ async function startRabbitMQConsumer() {
         }
       });
 
-      console.log('[AMQP] Connected. Consuming sensors, telemetry and alerts.');
+      // --- Actions: triggered by automation-engine, update actuatorState ---
+      const actionsExchange = 'actions';
+      await channel.assertExchange(actionsExchange, 'topic', { durable: false });
+      const acq = await channel.assertQueue('', { exclusive: true });
+      await channel.bindQueue(acq.queue, actionsExchange, '#');
+
+      channel.consume(acq.queue, (msg) => {
+        if (msg !== null) {
+          try {
+            const data = JSON.parse(msg.content.toString());
+            const { actuator, action, condition, ruleId } = data;
+            if (actuator && action && actuatorState[actuator] !== undefined) {
+              actuatorState[actuator] = {
+                state: action,
+                triggeredBy: `Rule #${ruleId}: ${condition}`,
+                lastChange: new Date().toISOString()
+              };
+              console.log(`[ACT] ${actuator} → ${action} (rule #${ruleId})`);
+              // Broadcast to frontend via WebSocket
+              broadcast({ type: 'actuator_update', payload: { id: actuator, ...actuatorState[actuator] } });
+            }
+          } catch (e) {
+            console.error('Failed to parse action message:', e);
+          }
+          channel.ack(msg);
+        }
+      });
+
+      console.log('[AMQP] Connected. Consuming sensors, telemetry, alerts and actions.');
 
       conn.on('error', (err) => {
         console.error('[AMQP] Connection error:', err.message);
@@ -104,6 +132,27 @@ async function startRabbitMQConsumer() {
   }
   console.error('[AMQP] Could not connect after retries.');
 }
+
+// ─── Actuators API (in-memory state) ─────────────────────────────────────
+
+const ACTUATOR_IDS = ['cooling_fan', 'entrance_humidifier', 'hall_ventilation', 'habitat_heater'];
+const actuatorState = {};
+ACTUATOR_IDS.forEach(id => actuatorState[id] = { state: 'OFF', triggeredBy: 'System', lastChange: null });
+
+app.get('/actuators', (req, res) => {
+  const result = ACTUATOR_IDS.map(id => ({ id, ...actuatorState[id] }));
+  res.json(result);
+});
+
+app.post('/actuators/:id', (req, res) => {
+  const { id } = req.params;
+  const { state } = req.body;
+  if (!ACTUATOR_IDS.includes(id)) return res.status(404).json({ error: 'Unknown actuator' });
+  if (state !== 'ON' && state !== 'OFF') return res.status(400).json({ error: 'State must be ON or OFF' });
+  actuatorState[id] = { state, triggeredBy: 'Manual override', lastChange: new Date().toISOString() };
+  console.log(`[ACT] ${id} → ${state}`);
+  res.json({ id, ...actuatorState[id] });
+});
 
 // ─── Rules API ────────────────────────────────────────────────────────────
 

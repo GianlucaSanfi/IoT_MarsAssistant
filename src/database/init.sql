@@ -7,5 +7,6 @@ CREATE TABLE rules (
     threshold TEXT,
     actuator TEXT,
     action TEXT,
-    enabled BOOLEAN DEFAULT true
+    enabled BOOLEAN DEFAULT true,
+    last_triggered TIMESTAMPTZ
 );

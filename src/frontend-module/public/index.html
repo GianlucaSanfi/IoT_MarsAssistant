@@ -1248,6 +1248,13 @@ function connectWebSocket() {
 
 // ─── HANDLE INCOMING EVENT ────────────────
 function handleIncomingEvent(raw) {
+  // Actuator update from automation-engine via RabbitMQ → server.js → WS
+  if (raw.type === 'actuator_update' && raw.payload) {
+    const { id, state, triggeredBy } = raw.payload;
+    if (id) updateActuatorWidget(id, state, triggeredBy || 'Automation rule');
+    return;
+  }
+
   // server.js wraps messages as { type: 'sensor_data', payload: {...} }
   const data = (raw.type === 'sensor_data' && raw.payload) ? raw.payload : raw;
 
@@ -1261,11 +1268,6 @@ function handleIncomingEvent(raw) {
 
   if (value !== undefined) {
     updateSensorWidget(sensorId, value, unit, metric, status);
-  }
-
-  // Handle actuator state updates
-  if (data.actuator_id) {
-    updateActuatorWidget(data.actuator_id, data.state || data.action, 'Automation rule');
   }
 }
 
@@ -1325,7 +1327,7 @@ function renderRules(rules) {
       <td><div class="rule-action">${rule.actuator} → ${rule.action}</div></td>
       <td><span class="pill ${enabled ? 'pill-on' : 'pill-off'}">${enabled ? 'ENABLED' : 'DISABLED'}</span></td>
       <td>
-        <div class="last-trig">${rule.last_triggered || '— never'}</div>
+        <div class="last-trig">${rule.last_triggered ? new Date(rule.last_triggered).toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) + ' UTC' : '— never'}</div>
         ${rule.last_action ? `<div class="last-trig-action">→ ${rule.last_action}</div>` : ''}
       </td>
       <td>
