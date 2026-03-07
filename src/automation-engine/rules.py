@@ -42,6 +42,14 @@ def callback(ch, method, properties, body):
 
         if value > threshold:
             print("Rule triggered:", r)
+            channel.basic_publish(
+                exchange="iot.events",
+                routing_key="actuator.command",
+                body=json.dumps({
+                    "actuator_id": r[4],
+                    "action": r[5]
+                })
+            )
 
 channel.basic_consume(
     queue=queue_name,
