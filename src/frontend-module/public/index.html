@@ -1,686 +1,1251 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>IoT Control Hub</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@500;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mars Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg:      #0a0c0f;
-    --bg2:     #0f1217;
-    --bg3:     #151921;
-    --border:  #1e2533;
-    --border2: #2a3347;
-    --accent:  #00d4ff;
-    --accent2: #0099cc;
-    --green:   #00ff88;
-    --yellow:  #ffcc00;
-    --red:     #ff4455;
-    --orange:  #ff8800;
-    --text:    #c8d8e8;
-    --text2:   #6a7d94;
-    --text3:   #3a4d60;
-    --mono:    'Share Tech Mono', monospace;
-    --sans:    'Barlow', sans-serif;
-    --cond:    'Barlow Condensed', sans-serif;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 14px;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.025) 2px, rgba(0,0,0,0.025) 4px);
-    pointer-events: none; z-index: 9999;
-  }
+:root {
+  --bg:      #04080f;
+  --surface: #080d16;
+  --card:    #0c1420;
+  --border:  #152033;
+  --border2: #1e3050;
+  --accent:  #e8420a;
+  --accent2: #ff6b35;
+  --blue:    #0ea5e9;
+  --blue2:   #38bdf8;
+  --teal:    #14b8a6;
+  --green:   #22c55e;
+  --yellow:  #f59e0b;
+  --red:     #ef4444;
+  --purple:  #8b5cf6;
+  --text:    #c8d8e8;
+  --muted:   #4a6080;
+  --muted2:  #2a3f58;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Exo 2', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 30%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 20%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 92% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(ellipse 60% 40% at 15% 50%, rgba(232,66,10,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 35% at 85% 30%, rgba(14,165,233,0.05) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(14,165,233,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14,165,233,0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none; z-index: 0;
+}
 
-  /* ── Header ── */
-  header {
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    padding: 0 24px; height: 56px;
-    display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top: 0; z-index: 100;
-  }
-  .logo { display: flex; align-items: center; gap: 12px; }
-  .logo-icon { width: 32px; height: 32px; }
-  .logo-icon svg { width: 100%; height: 100%; }
-  .logo-text { font-family: var(--cond); font-size: 20px; font-weight: 700; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; }
-  .logo-sub  { font-family: var(--mono); font-size: 9px; color: var(--text2); letter-spacing: 2px; text-transform: uppercase; margin-top: -2px; }
-  .status-bar { display: flex; align-items: center; gap: 20px; }
-  .status-pill { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--text2); }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
-  .dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
-  .dot.warn { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
-  .dot.dead { background: var(--red);    box-shadow: 0 0 6px var(--red); }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-  #clock { font-family: var(--mono); font-size: 12px; color: var(--text2); letter-spacing: 1px; }
+/* LAYOUT */
+.shell {
+  position: relative; z-index: 1;
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  grid-template-columns: 220px 1fr;
+  min-height: 100vh;
+}
 
-  /* ── Nav tabs ── */
-  .nav-tabs {
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    display: flex; gap: 0; padding: 0 24px;
-  }
-  .nav-tab {
-    font-family: var(--cond); font-size: 13px; font-weight: 700;
-    letter-spacing: 2px; text-transform: uppercase;
-    color: var(--text2); padding: 10px 20px;
-    border-bottom: 2px solid transparent;
-    cursor: pointer; transition: all .15s;
-    background: none; border-top: none; border-left: none; border-right: none;
-  }
-  .nav-tab:hover { color: var(--text); }
-  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+/* TOPBAR */
+.topbar {
+  grid-column: 1 / -1;
+  background: rgba(8,13,22,0.95);
+  border-bottom: 1px solid var(--border2);
+  display: flex; align-items: center;
+  padding: 0 24px; gap: 20px;
+  backdrop-filter: blur(10px);
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-mark {
+  width: 36px; height: 36px; flex-shrink: 0;
+  image-rendering: pixelated;
+}
+.logo-text { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; color: #fff; letter-spacing: 2px; }
+.logo-sub { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+.topbar-center { flex: 1; }
+.conn-status {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Share Tech Mono', monospace; font-size: 11px;
+  padding: 4px 12px; border-radius: 4px;
+  border: 1px solid rgba(34,197,94,0.3);
+  background: rgba(34,197,94,0.05);
+  transition: all 0.3s;
+}
+.conn-status.offline { color: var(--red); border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.05); }
+.conn-status.online { color: var(--green); }
+.pulse {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s ease-in-out infinite;
+  box-shadow: 0 0 6px var(--green);
+}
+.pulse.offline { background: var(--red); box-shadow: 0 0 6px var(--red); animation: none; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
+.topbar-time { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--muted); letter-spacing: 1px; }
+.topbar-sol {
+  font-family: 'Orbitron', sans-serif; font-size: 11px;
+  color: var(--accent2); letter-spacing: 1px;
+  padding: 4px 12px; border: 1px solid rgba(232,66,10,0.3);
+  border-radius: 4px; background: rgba(232,66,10,0.06);
+}
 
-  /* ── Pages ── */
-  .page { display: none; }
-  .page.active { display: flex; flex-direction: column; }
+/* SIDEBAR */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px 0; overflow-y: auto;
+}
+.nav-section {
+  padding: 0 16px; margin-bottom: 6px; margin-top: 20px;
+  font-family: 'Share Tech Mono', monospace; font-size: 9px;
+  letter-spacing: 2px; color: var(--muted); text-transform: uppercase;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.15s; font-size: 13px;
+  font-weight: 500; color: var(--muted); position: relative;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+.nav-item.active { color: var(--blue2); border-left-color: var(--blue); background: rgba(14,165,233,0.06); }
+.nav-icon { width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.nav-icon svg { width: 16px; height: 16px; }
+.nav-divider { height: 1px; background: var(--border); margin: 12px 16px; }
 
-  /* ── Dashboard layout ── */
-  .dash-layout {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    height: calc(100vh - 96px);
-  }
+/* MAIN */
+.main { overflow-y: auto; padding: 24px; }
+.screen { display: none; }
+.screen.active { display: block; }
 
-  /* ── Panels ── */
-  .panel {
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    display: flex; flex-direction: column; overflow: hidden;
-  }
-  .panel:nth-child(2) { border-right: none; }
-  .panel-header {
-    padding: 10px 16px;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-    flex-shrink: 0;
-  }
-  .panel-title {
-    font-family: var(--cond); font-size: 13px; font-weight: 700;
-    letter-spacing: 2px; text-transform: uppercase;
-    color: var(--text); display: flex; align-items: center; gap: 8px;
-  }
-  .label-tag {
-    font-family: var(--mono); font-size: 9px; color: var(--text3);
-    letter-spacing: 1px; padding: 2px 6px; border: 1px solid var(--border2);
-  }
-  .panel-body { flex: 1; overflow-y: auto; }
-  .panel-body::-webkit-scrollbar { width: 4px; }
-  .panel-body::-webkit-scrollbar-thumb { background: var(--border2); }
+/* PAGE HEADER */
+.page-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+}
+.page-title { font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+.page-sub { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; }
+.live-tag {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  color: var(--green); border: 1px solid rgba(34,197,94,0.3);
+  padding: 5px 12px; border-radius: 4px; background: rgba(34,197,94,0.05);
+}
 
-  /* ── Sensor grid ── */
-  #sensor-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
-    gap: 1px; background: var(--border);
-  }
-  .sensor-card {
-    background: var(--bg); padding: 14px 16px;
-    position: relative; overflow: hidden; transition: background .2s;
-  }
-  .sensor-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: var(--accent2); transform: scaleX(0); transform-origin: left; transition: transform .3s;
-  }
-  .sensor-card.updated::before { transform: scaleX(1); }
-  .sensor-card.updated { background: #0d1520; }
-  .sc-name  { font-family: var(--mono); font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sc-metric{ font-family: var(--mono); font-size: 9px;  color: var(--text3); margin-bottom: 6px; }
-  .sc-value { font-family: var(--mono); font-size: 24px; color: var(--accent); line-height: 1; }
-  .sc-unit  { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-top: 4px; }
-  .sc-time  { font-family: var(--mono); font-size: 9px;  color: var(--text3); margin-top: 6px; }
-  .sc-status{ display: inline-block; font-family: var(--mono); font-size: 8px; padding: 1px 5px; margin-top: 4px; border: 1px solid; text-transform: uppercase; letter-spacing: 1px; }
-  .sc-status.ok   { color: var(--green);  border-color: var(--green); }
-  .sc-status.warn { color: var(--yellow); border-color: var(--yellow); }
-  .sc-status.error{ color: var(--red);    border-color: var(--red); }
-  #no-sensors { padding: 48px; text-align: center; color: var(--text3); font-family: var(--mono); font-size: 12px; grid-column: 1/-1; }
+/* DIVIDER */
+.divider { display: flex; align-items: center; gap: 12px; margin: 20px 0 16px; }
+.divider-label { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.divider-line { flex: 1; height: 1px; background: var(--border); }
 
-  /* ── Event log ── */
-  .log-entry {
-    display: grid; grid-template-columns: 88px 90px 90px 1fr;
-    padding: 6px 16px; border-bottom: 1px solid var(--border);
-    font-family: var(--mono); font-size: 11px;
-    animation: fadeIn .25s ease;
-  }
-  @keyframes fadeIn { from{opacity:0;background:#0d2030} to{opacity:1} }
-  .log-time   { color: var(--text3); }
-  .log-sensor { color: var(--accent2); }
-  .log-metric { color: var(--text2); }
-  .log-val    { color: var(--text); }
-  .log-val span { color: var(--text3); }
-  #log-empty { padding: 48px; text-align: center; color: var(--text3); font-family: var(--mono); font-size: 12px; }
+/* SENSOR GRID */
+.sensor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 24px; }
 
-  /* ── Rules page ── */
-  .rules-page { height: calc(100vh - 96px); display: flex; flex-direction: column; }
-  .rules-toolbar {
-    padding: 12px 20px; background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-    flex-shrink: 0;
-  }
-  .rules-toolbar-left { display: flex; align-items: center; gap: 12px; }
-  .count-badge { font-family: var(--mono); font-size: 10px; color: var(--text3); background: var(--bg3); padding: 3px 10px; border: 1px solid var(--border); }
+.sensor-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px; position: relative;
+  overflow: hidden; transition: border-color 0.2s, transform 0.2s;
+}
+.sensor-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 2px; background: linear-gradient(90deg, var(--blue), transparent); opacity: 0.6;
+}
+.sensor-card.stream::before { background: linear-gradient(90deg, var(--purple), transparent); }
+.sensor-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+.sensor-card.alert { border-color: rgba(239,68,68,0.5); animation: alertPulse 1.5s ease-in-out infinite; }
+.sensor-card.alert::before { background: linear-gradient(90deg, var(--red), transparent); opacity: 1; }
+@keyframes alertPulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0)} 50%{box-shadow:0 0 0 4px rgba(239,68,68,0.15)} }
 
-  /* Rules table */
-  .rules-table-wrap { flex: 1; overflow-y: auto; }
-  .rules-table { width: 100%; border-collapse: collapse; }
-  .rules-table th {
-    font-family: var(--cond); font-size: 11px; font-weight: 700;
-    letter-spacing: 2px; text-transform: uppercase; color: var(--text2);
-    padding: 8px 16px; text-align: left;
-    background: var(--bg2); border-bottom: 1px solid var(--border);
-    position: sticky; top: 0;
-  }
-  .rules-table td {
-    padding: 10px 16px; border-bottom: 1px solid var(--border);
-    font-family: var(--mono); font-size: 12px; vertical-align: middle;
-  }
-  .rules-table tr:hover td { background: var(--bg2); }
-  .tok-sensor   { color: var(--accent); }
-  .tok-attr     { color: var(--accent2); }
-  .tok-op       { color: var(--yellow); padding: 0 3px; }
-  .tok-val      { color: var(--green); }
-  .tok-arrow    { color: var(--text3); padding: 0 4px; }
-  .tok-actuator { color: var(--text2); }
-  .tok-action   { color: var(--orange); }
-  #rules-empty-row td { padding: 48px; text-align: center; color: var(--text3); }
+/* Flash on update — S-04b */
+@keyframes flashUpdate { 0%{background:rgba(14,165,233,0.15);border-color:var(--blue)} 100%{background:transparent} }
+@keyframes flashUpdateStream { 0%{background:rgba(139,92,246,0.15);border-color:var(--purple)} 100%{background:transparent} }
+.sensor-card.flash { animation: flashUpdate 0.6s ease-out; }
+.sensor-card.flash.stream { animation: flashUpdateStream 0.6s ease-out; }
 
-  /* ── Modal ── */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.7); z-index: 500;
-    align-items: center; justify-content: center;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal {
-    background: var(--bg2); border: 1px solid var(--border2);
-    width: 480px; max-width: 95vw;
-    animation: slideUp .2s ease;
-  }
-  @keyframes slideUp { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
-  .modal-header {
-    padding: 14px 20px; border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .modal-title { font-family: var(--cond); font-size: 15px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
-  .modal-close { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 4px; }
-  .modal-close:hover { color: var(--text); }
-  .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-  .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+.sensor-id { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-bottom: 8px; text-transform: uppercase; }
+.sensor-id.stream-id { color: #a78bfa; }
+.sensor-value-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; }
+.sensor-value { font-family: 'Orbitron', sans-serif; font-size: 30px; font-weight: 700; color: #fff; line-height: 1; }
+.sensor-unit { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--muted); }
+.sensor-metric { font-size: 11px; color: var(--muted); margin-bottom: 10px; font-family: 'Share Tech Mono', monospace; }
 
-  /* ── Form elements ── */
-  .field-group { display: flex; flex-direction: column; gap: 4px; }
-  .field-row   { display: grid; gap: 12px; }
-  .field-row.col2 { grid-template-columns: 1fr 1fr; }
-  .field-row.col3 { grid-template-columns: 1fr 80px 100px; }
-  label { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
-  input, select {
-    width: 100%; background: var(--bg); border: 1px solid var(--border2);
-    color: var(--text); padding: 8px 10px;
-    font-family: var(--mono); font-size: 12px;
-    outline: none; transition: border-color .15s; -webkit-appearance: none;
-  }
-  input:focus, select:focus { border-color: var(--accent); }
-  select option { background: var(--bg2); }
-  .field-divider { height: 1px; background: var(--border); margin: 2px 0; }
+/* FLAT METRICS GRID */
+.sensor-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px; margin-bottom: 10px;
+}
+.metric-item {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 5px; padding: 7px 8px;
+}
+.metric-value {
+  font-family: 'Orbitron', sans-serif; font-size: 16px;
+  font-weight: 700; color: #fff; line-height: 1; margin-bottom: 2px;
+}
+.metric-label {
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  color: var(--blue2); margin-bottom: 3px;
+}
+.metric-name {
+  font-family: 'Share Tech Mono', monospace; font-size: 9px;
+  color: var(--muted); letter-spacing: 0.5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sparkline { height: 36px; margin-bottom: 8px; }
+.sparkline svg { width: 100%; height: 100%; }
+.sensor-status { display: flex; align-items: center; gap: 6px; font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 1px; }
+.status-ok { color: var(--green); }
+.status-alert { color: var(--red); }
+.status-stream { color: #a78bfa; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; }
+.dot-green { background: var(--green); box-shadow: 0 0 4px var(--green); }
+.dot-red { background: var(--red); box-shadow: 0 0 4px var(--red); animation: pulse 1s infinite; }
+.dot-purple { background: var(--purple); box-shadow: 0 0 4px var(--purple); }
+.alert-badge {
+  position: absolute; top: 10px; right: 10px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--red); display: flex; align-items: center;
+  justify-content: center; font-size: 11px; font-weight: 700;
+  color: white; animation: pulse 1s infinite;
+}
 
-  /* ── Buttons ── */
-  .btn { cursor: pointer; font-family: var(--cond); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 8px 18px; border: none; transition: all .15s; }
-  .btn-primary  { background: var(--accent); color: var(--bg); }
-  .btn-primary:hover { background: #00b8e0; }
-  .btn-update   { background: var(--yellow); color: var(--bg); }
-  .btn-update:hover { background: #e6b800; }
-  .btn-ghost    { background: none; border: 1px solid var(--border2); color: var(--text2); }
-  .btn-ghost:hover { border-color: var(--text2); color: var(--text); }
-  .btn-sm { padding: 4px 10px; font-size: 10px; }
-  .btn-danger { background: none; border: 1px solid var(--border2); color: var(--text2); cursor: pointer; font-family: var(--mono); font-size: 10px; padding: 4px 10px; text-transform: uppercase; letter-spacing: 1px; transition: all .15s; }
-  .btn-danger:hover { border-color: var(--red); color: var(--red); }
-  .btn-edit { background: none; border: 1px solid var(--border2); color: var(--text2); cursor: pointer; font-family: var(--mono); font-size: 10px; padding: 4px 10px; text-transform: uppercase; letter-spacing: 1px; transition: all .15s; }
-  .btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+/* ACTUATOR GRID */
+.actuator-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.actuator-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 18px; position: relative;
+  overflow: hidden; transition: all 0.2s;
+}
+.actuator-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+.actuator-card.on::before { background: linear-gradient(90deg, var(--green), transparent); }
+.actuator-card.off::before { background: linear-gradient(90deg, var(--muted2), transparent); }
+.actuator-card.on { border-color: rgba(34,197,94,0.2); }
 
-  /* ── Toast ── */
-  #toast {
-    position: fixed; bottom: 24px; right: 24px;
-    background: var(--bg2); border: 1px solid var(--border2); border-left: 3px solid var(--green);
-    padding: 12px 20px; font-family: var(--mono); font-size: 12px; color: var(--text);
-    opacity: 0; transform: translateY(10px); transition: all .3s;
-    z-index: 1000; pointer-events: none; max-width: 420px;
-  }
-  #toast.show { opacity: 1; transform: translateY(0); }
-  #toast.error { border-left-color: var(--red); }
-  #toast.alert { border-left-color: var(--orange); }
+/* Flash confirmation — A-05 */
+@keyframes flashConfirm { 0%{box-shadow:0 0 0 0 rgba(14,165,233,0.6)} 100%{box-shadow:0 0 0 12px rgba(14,165,233,0)} }
+.actuator-card.confirmed { animation: flashConfirm 0.5s ease-out; }
 
-  @media (max-width: 800px) {
-    .dash-layout { grid-template-columns: 1fr; height: auto; }
-    .panel { min-height: 280px; border-right: none; }
-  }
+.act-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.act-id { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+.act-name { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 600; color: #fff; }
+.toggle-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.toggle {
+  width: 52px; height: 28px; border-radius: 14px;
+  border: 2px solid var(--border2); background: var(--surface);
+  position: relative; cursor: pointer; transition: all 0.25s;
+}
+.toggle.on { background: rgba(34,197,94,0.15); border-color: var(--green); box-shadow: 0 0 12px rgba(34,197,94,0.2); }
+.toggle-knob { position: absolute; top: 3px; width: 18px; height: 18px; border-radius: 50%; transition: all 0.25s; }
+.toggle.off .toggle-knob { left: 3px; background: var(--muted); }
+.toggle.on .toggle-knob { left: 27px; background: var(--green); box-shadow: 0 0 6px var(--green); }
+.toggle-label { font-family: 'Orbitron', sans-serif; font-size: 10px; letter-spacing: 1px; }
+.toggle.on + .toggle-label { color: var(--green); }
+.toggle.off + .toggle-label { color: var(--muted); }
+.act-info { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); line-height: 1.6; }
+.act-info .trigger-source { color: var(--teal); }
+
+/* AUTOMATIONS TABLE */
+.table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.table-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.table-title { font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 600; color: #fff; letter-spacing: 1px; }
+.btn-new {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 16px; background: rgba(14,165,233,0.1);
+  border: 1px solid rgba(14,165,233,0.4); border-radius: 5px;
+  color: var(--blue2); font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; letter-spacing: 1px; cursor: pointer; transition: all 0.15s;
+}
+.btn-new:hover { background: rgba(14,165,233,0.2); }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 10px 18px; font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.01); }
+td { padding: 12px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.01); }
+.rule-name { font-family: 'Exo 2', sans-serif; font-size: 14px; font-weight: 600; color: #fff; }
+.rule-condition { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--blue2); background: rgba(14,165,233,0.08); border: 1px solid rgba(14,165,233,0.15); padding: 3px 8px; border-radius: 3px; display: inline-block; }
+.rule-action { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--teal); background: rgba(20,184,166,0.08); border: 1px solid rgba(20,184,166,0.15); padding: 3px 8px; border-radius: 3px; display: inline-block; }
+.pill { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1px; padding: 3px 9px; border-radius: 3px; }
+.pill-on  { background: rgba(34,197,94,0.1);  color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+.pill-off { background: rgba(74,96,128,0.1);  color: var(--muted);  border: 1px solid var(--border2); }
+.last-trig { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); }
+.last-trig-action { font-size: 9px; color: var(--teal); margin-top: 2px; }
+.action-btns { display: flex; gap: 6px; }
+.icon-btn { width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--border2); background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+.icon-btn:hover { border-color: var(--blue); color: var(--blue2); background: rgba(14,165,233,0.08); }
+.icon-btn.del:hover { border-color: var(--red); color: var(--red); background: rgba(239,68,68,0.08); }
+
+/* MODAL */
+.modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(4,8,15,0.85); z-index: 200; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.modal-backdrop.open { display: flex; }
+.modal { background: var(--card); border: 1px solid var(--border2); border-radius: 10px; width: 520px; max-width: 90vw; box-shadow: 0 0 60px rgba(14,165,233,0.1), 0 30px 60px rgba(0,0,0,0.5); overflow: hidden; }
+.modal-top { background: var(--surface); padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-title { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+.modal-close { width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.modal-body { padding: 22px; }
+.form-section { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; margin-top: 18px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.form-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.form-group { flex: 1; min-width: 100px; display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+.form-input, .form-select { background: var(--surface); border: 1px solid var(--border2); border-radius: 5px; padding: 8px 12px; color: var(--text); font-family: 'Share Tech Mono', monospace; font-size: 12px; outline: none; transition: border-color 0.15s; width: 100%; appearance: none; }
+.form-input:focus, .form-select:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(14,165,233,0.1); }
+.rule-preview { margin: 16px 0; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border2); border-radius: 5px; border-left: 3px solid var(--blue); font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--blue2); min-height: 40px; }
+.then-sep { text-align: center; font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--muted); letter-spacing: 2px; margin: 14px 0; display: flex; align-items: center; gap: 10px; }
+.then-sep::before, .then-sep::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.modal-footer { padding: 16px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+.btn { padding: 9px 20px; border-radius: 5px; font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 1px; cursor: pointer; transition: all 0.15s; border: none; }
+.btn-primary { background: var(--blue); color: var(--bg); font-weight: 700; }
+.btn-primary:hover { background: var(--blue2); box-shadow: 0 0 16px rgba(14,165,233,0.3); }
+.btn-ghost { background: transparent; border: 1px solid var(--border2); color: var(--muted); }
+.btn-ghost:hover { border-color: var(--muted); color: var(--text); }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--card); border: 1px solid var(--green);
+  border-radius: 6px; padding: 12px 18px;
+  font-family: 'Share Tech Mono', monospace; font-size: 12px;
+  color: var(--green); z-index: 300;
+  box-shadow: 0 0 20px rgba(34,197,94,0.2);
+  transform: translateY(80px); opacity: 0;
+  transition: all 0.3s;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.error { border-color: var(--red); color: var(--red); box-shadow: 0 0 20px rgba(239,68,68,0.2); }
+
+/* SENSOR SECONDARY VALUES */
+.sensor-secondary {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 8px; min-height: 0;
+}
+.sec-metric {
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  color: var(--muted); background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border); border-radius: 3px;
+  padding: 2px 6px;
+}
+.sec-metric b { color: var(--text); }
+
+/* SENSOR FOOTER */
+.sensor-footer {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sensor-updated {
+  font-family: 'Share Tech Mono', monospace; font-size: 9px;
+  color: var(--muted2); letter-spacing: 0.5px;
+}
+
+/* ACTUATOR ICON */
+.act-icon {
+  width: 32px; height: 32px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border); color: var(--muted);
+  transition: color 0.2s, border-color 0.2s;
+}
+.act-icon svg { width: 18px; height: 18px; }
+.actuator-card.on .act-icon { color: var(--green); border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.08); }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 </style>
 </head>
 <body>
+<div class="shell">
 
-<header>
-  <div class="logo">
-    <div class="logo-icon">
-      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="1" y="1" width="30" height="30" rx="2" stroke="#00d4ff" stroke-width="1.5"/>
-        <circle cx="16" cy="16" r="6" stroke="#00d4ff" stroke-width="1.5"/>
-        <circle cx="16" cy="16" r="2" fill="#00d4ff"/>
-        <line x1="16" y1="1" x2="16" y2="10" stroke="#00d4ff" stroke-width="1.5"/>
-        <line x1="16" y1="22" x2="16" y2="31" stroke="#00d4ff" stroke-width="1.5"/>
-        <line x1="1"  y1="16" x2="10" y2="16" stroke="#00d4ff" stroke-width="1.5"/>
-        <line x1="22" y1="16" x2="31" y2="16" stroke="#00d4ff" stroke-width="1.5"/>
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="logo">
+      <!-- Pixel art Mars -->
+      <svg class="logo-mark" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+        <!-- Base planet -->
+        <rect x="5" y="1" width="6" height="1" fill="#c1440e"/>
+        <rect x="3" y="2" width="10" height="1" fill="#d4521a"/>
+        <rect x="2" y="3" width="12" height="1" fill="#e8420a"/>
+        <rect x="1" y="4" width="14" height="1" fill="#e8420a"/>
+        <rect x="1" y="5" width="14" height="1" fill="#d4521a"/>
+        <rect x="1" y="6" width="14" height="1" fill="#c1440e"/>
+        <rect x="1" y="7" width="14" height="1" fill="#b33a08"/>
+        <rect x="1" y="8" width="14" height="1" fill="#c1440e"/>
+        <rect x="1" y="9" width="14" height="1" fill="#d4521a"/>
+        <rect x="1" y="10" width="14" height="1" fill="#c1440e"/>
+        <rect x="2" y="11" width="12" height="1" fill="#b33a08"/>
+        <rect x="3" y="12" width="10" height="1" fill="#a03206"/>
+        <rect x="5" y="13" width="6" height="1" fill="#8c2b04"/>
+        <!-- Craters -->
+        <rect x="4" y="5" width="2" height="2" fill="#8c2b04" opacity="0.7"/>
+        <rect x="10" y="7" width="3" height="2" fill="#8c2b04" opacity="0.6"/>
+        <rect x="6" y="9" width="2" height="1" fill="#8c2b04" opacity="0.5"/>
+        <!-- Highlight -->
+        <rect x="9" y="3" width="3" height="2" fill="#ff7a45" opacity="0.5"/>
+        <rect x="11" y="4" width="1" height="1" fill="#ffaa80" opacity="0.6"/>
       </svg>
-    </div>
-    <div>
-      <div class="logo-text">IOT HUB</div>
-      <div class="logo-sub">Control &amp; Automation</div>
-    </div>
-  </div>
-  <div class="status-bar">
-    <div class="status-pill">
-      <div class="dot" id="ws-dot"></div>
-      <span id="ws-status">CONNECTING</span>
-    </div>
-    <div id="clock"></div>
-  </div>
-</header>
-
-<div class="nav-tabs">
-  <button class="nav-tab active" onclick="showPage('dashboard', this)">DASHBOARD</button>
-  <button class="nav-tab"        onclick="showPage('rules', this)">AUTOMATION RULES</button>
-</div>
-
-<!-- ── DASHBOARD PAGE ── -->
-<div class="page active" id="page-dashboard">
-  <div class="dash-layout">
-
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">LIVE SENSORS <span class="label-tag">FEED</span></div>
-        <div id="sensor-count" class="count-badge">0 ACTIVE</div>
+      <div>
+        <div class="logo-text">MARS ASSISTANT</div>
+        <div class="logo-sub">Mars Environment Automation Platform</div>
       </div>
-      <div class="panel-body">
-        <div id="sensor-grid">
-          <div id="no-sensors">// WAITING FOR SENSOR DATA</div>
+    </div>
+    <div class="topbar-center"></div>
+    <!-- G-02: system connection status -->
+    <div class="conn-status online" id="connStatus">
+      <div class="pulse" id="connPulse"></div>
+      <span id="connLabel">LIVE</span>
+    </div>
+    <div class="topbar-time" id="clock">--:--:-- UTC</div>
+    <div class="topbar-sol" id="topbar-year">2036</div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="nav-section">Monitoring</div>
+    <div class="nav-item active" id="nav-sensors" onclick="goTo('sensors', this)">
+      <span class="nav-icon">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <circle cx="8" cy="8" r="2"/>
+          <path d="M4 8 Q4 4 8 4 Q12 4 12 8"/>
+          <path d="M2 8 Q2 2 8 2 Q14 2 14 8"/>
+        </svg>
+      </span> Sensors
+    </div>
+    <div class="nav-item" id="nav-actuators" onclick="goTo('actuators', this)">
+      <span class="nav-icon">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="6" width="12" height="4" rx="2"/>
+          <circle cx="5" cy="8" r="1.5" fill="currentColor" stroke="none"/>
+          <line x1="11" y1="8" x2="13" y2="8"/>
+        </svg>
+      </span> Actuators
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">Control</div>
+    <div class="nav-item" id="nav-automations" onclick="goTo('automations', this)">
+      <span class="nav-icon">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 4 L8 2 L13 4 L13 9 Q13 13 8 15 Q3 13 3 9 Z"/>
+          <path d="M6 8 L7.5 9.5 L10 7"/>
+        </svg>
+      </span> Automations
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- SENSORS -->
+    <div id="sensors" class="screen active">
+      <div class="page-header">
+        <div>
+          <div class="page-title">ALL SENSORS</div>
+          <div class="page-sub">// 15 DEVICES</div>
+        </div>
+        <div class="live-tag"><div class="pulse"></div> LIVE · WebSocket</div>
+      </div>
+      <div class="divider">
+        <div class="divider-line"></div>
+        <div class="divider-label">REST SENSORS · 8 devices</div>
+        <div class="divider-line"></div>
+      </div>
+      <div class="sensor-grid" id="restSensorGrid"></div>
+      <div class="divider" style="margin-top:28px">
+        <div class="divider-line"></div>
+        <div class="divider-label">TELEMETRY STREAMS · 7 SSE/WS topics</div>
+        <div class="divider-line"></div>
+      </div>
+      <div class="sensor-grid" id="streamSensorGrid"></div>
+    </div>
+
+    <!-- ACTUATORS -->
+    <div id="actuators" class="screen">
+      <div class="page-header">
+        <div>
+          <div class="page-title">ACTUATOR CONTROL</div>
+          <div class="page-sub">// 4 DEVICES · DIRECT CONTROL ENABLED</div>
+        </div>
+        <div class="live-tag"><div class="pulse"></div> LIVE · WebSocket</div>
+      </div>
+      <div class="actuator-grid" id="actuatorGrid"></div>
+    </div>
+
+    <!-- AUTOMATIONS -->
+    <div id="automations" class="screen">
+      <div class="page-header">
+        <div>
+          <div class="page-title">AUTOMATION RULES</div>
+          <div class="page-sub">// IF–THEN RULE ENGINE · POSTGRESQL PERSISTED</div>
         </div>
       </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">EVENT LOG <span class="label-tag">STREAM</span></div>
-        <button class="btn btn-ghost btn-sm" onclick="clearLog()">CLEAR</button>
-      </div>
-      <div class="panel-body">
-        <div id="event-log">
-          <div id="log-empty">// NO EVENTS YET</div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Active Rules</div>
+          <div class="btn-new" onclick="openModal()">+ NEW RULE</div>
         </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Name / Condition</th>
+              <th>Action</th>
+              <th>Status</th>
+              <th>Last Triggered</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="rulesTable"></tbody>
+        </table>
       </div>
     </div>
 
-  </div>
+  </main>
 </div>
 
-<!-- ── RULES PAGE ── -->
-<div class="page" id="page-rules">
-  <div class="rules-page">
-    <div class="rules-toolbar">
-      <div class="rules-toolbar-left">
-        <div class="panel-title">AUTOMATION RULES <span class="label-tag">ENGINE</span></div>
-        <div id="rules-count" class="count-badge">0 RULES</div>
-      </div>
-      <button class="btn btn-primary" onclick="openModal()">+ NEW RULE</button>
-    </div>
-    <div class="rules-table-wrap">
-      <table class="rules-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Condition</th>
-            <th>Actuator</th>
-            <th>Action</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="rules-tbody">
-          <tr id="rules-empty-row"><td colspan="5">// NO RULES DEFINED</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<!-- ── RULE MODAL ── -->
-<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+<!-- MODAL — CREATE / EDIT RULE -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeModal()">
   <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title" id="modal-title">NEW RULE</span>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-top">
+      <div class="modal-title" id="modalTitle">NEW AUTOMATION RULE</div>
+      <div class="modal-close" onclick="closeModal()">✕</div>
     </div>
     <div class="modal-body">
-      <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1px;">
-        // IF sensor.attribute matches condition → trigger actuator action
-      </div>
-
-      <div class="field-row col3">
-        <div class="field-group">
-          <label>Sensor ID</label>
-          <input id="f-sensor" type="text" placeholder="e.g. co2_hall"/>
+      <input type="hidden" id="editRuleId">
+      <div class="form-row">
+        <div class="form-group">
+          <div class="form-label">Rule Name</div>
+          <input class="form-input" id="ruleName" placeholder="e.g. Overheat protection" oninput="updatePreview()">
         </div>
-        <div class="field-group">
-          <label>Operator</label>
-          <select id="f-operator">
-            <option value=">">&gt;</option>
-            <option value="<">&lt;</option>
-            <option value=">=">&gt;=</option>
-            <option value="<=">&lt;=</option>
-            <option value="==">==</option>
-            <option value="!=">!=</option>
+      </div>
+      <div class="form-section">IF — Condition</div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <div class="form-label">Sensor</div>
+          <select class="form-select" id="ruleSensor" onchange="updatePreview()">
+            <option value="greenhouse_temperature">greenhouse_temperature</option>
+            <option value="entrance_humidity">entrance_humidity</option>
+            <option value="co2_hall">co2_hall</option>
+            <option value="hydroponic_ph">hydroponic_ph</option>
+            <option value="water_tank_level">water_tank_level</option>
+            <option value="corridor_pressure">corridor_pressure</option>
+            <option value="air_quality_pm25">air_quality_pm25</option>
+            <option value="air_quality_voc">air_quality_voc</option>
           </select>
         </div>
-        <div class="field-group">
-          <label>Threshold</label>
-          <input id="f-threshold" type="number" placeholder="1000" step="any"/>
+        <div class="form-group" style="flex:0.8">
+          <div class="form-label">Operator</div>
+          <select class="form-select" id="ruleOperator" onchange="updatePreview()">
+            <option value=">">&gt;</option>
+            <option value=">=">&gt;=</option>
+            <option value="=">=</option>
+            <option value="<=">&lt;=</option>
+            <option value="<">&lt;</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:0.8">
+          <div class="form-label">Threshold</div>
+          <input class="form-input" id="ruleThreshold" placeholder="28" type="number" oninput="updatePreview()">
         </div>
       </div>
-
-      <div class="field-group">
-        <label>Attribute (metric)</label>
-        <input id="f-attribute" type="text" placeholder="e.g. co2_ppm"/>
-      </div>
-
-      <div class="field-divider"></div>
-
-      <div class="field-row col2">
-        <div class="field-group">
-          <label>Actuator ID</label>
-          <input id="f-actuator" type="text" placeholder="e.g. ventilation_01"/>
+      <div class="then-sep">THEN</div>
+      <div class="form-section">Action</div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <div class="form-label">Actuator</div>
+          <select class="form-select" id="ruleActuator" onchange="updatePreview()">
+            <option value="cooling_fan">cooling_fan</option>
+            <option value="entrance_humidifier">entrance_humidifier</option>
+            <option value="hall_ventilation">hall_ventilation</option>
+            <option value="habitat_heater">habitat_heater</option>
+          </select>
         </div>
-        <div class="field-group">
-          <label>Action</label>
-          <input id="f-action" type="text" placeholder="e.g. ON"/>
+        <div class="form-group" style="flex:1">
+          <div class="form-label">Set State</div>
+          <select class="form-select" id="ruleAction" onchange="updatePreview()">
+            <option value="ON">ON</option>
+            <option value="OFF">OFF</option>
+          </select>
         </div>
       </div>
+      <div class="rule-preview" id="rulePreview">IF — THEN —</div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">CANCEL</button>
-      <button class="btn btn-primary" id="modal-submit-btn" onclick="submitRule()">ADD RULE</button>
+      <button class="btn btn-primary" onclick="saveRule()">SAVE RULE</button>
     </div>
   </div>
 </div>
 
-<div id="toast"></div>
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
 
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
-const sensors = {};   // keyed by sensor_id:metric
-let rules = [];
-let editingId = null;
-let logCount = 0;
-const MAX_LOG = 300;
+// ═══════════════════════════════════════════
+// MEAP — Mars Environment Automation Platform
+// dashboard.js
+// ═══════════════════════════════════════════
 
-// ── Clock ──────────────────────────────────────────────────────────────────
-function updateClock() {
-  document.getElementById('clock').textContent =
-    new Date().toISOString().replace('T',' ').substring(0,19);
+// ─── CONFIG ───────────────────────────────
+const REST_SENSORS = [
+  { id: 'greenhouse_temperature', unit: '°C',    metric: 'temperature' },
+  { id: 'entrance_humidity',      unit: '%',     metric: 'humidity' },
+  { id: 'co2_hall',               unit: 'ppm',   metric: 'co2' },
+  { id: 'hydroponic_ph',          unit: 'pH',    metric: 'ph' },
+  { id: 'water_tank_level',       unit: '%',     metric: 'level' },
+  { id: 'corridor_pressure',      unit: 'kPa',   metric: 'pressure' },
+  { id: 'air_quality_pm25',       unit: 'µg/m³', metric: 'pm2.5' },
+  { id: 'air_quality_voc',        unit: 'ppb',   metric: 'voc' },
+];
+
+const STREAM_SENSORS = [
+  { id: 'solar_array',        unit: 'W',     metric: 'power' },
+  { id: 'radiation',          unit: 'mSv/h', metric: 'radiation' },
+  { id: 'life_support',       unit: '%O₂',   metric: 'life_support' },
+  { id: 'thermal_loop',       unit: '°C',    metric: 'temperature' },
+  { id: 'power_bus',          unit: 'V',     metric: 'voltage' },
+  { id: 'power_consumption',  unit: 'W',     metric: 'consumption' },
+  { id: 'airlock',            unit: '',      metric: 'status' },
+];
+
+const ACTUATORS = [
+  { id: 'cooling_fan',         name: 'Cooling Fan',         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M10 12c0-3.314 1.343-6 3-6s2 1.343 2 3c0 3.314-1.343 6-3 6s-2-1.343-2-3z" transform="rotate(0 12 12)"/><path d="M10 12c0-3.314 1.343-6 3-6s2 1.343 2 3c0 3.314-1.343 6-3 6s-2-1.343-2-3z" transform="rotate(120 12 12)"/><path d="M10 12c0-3.314 1.343-6 3-6s2 1.343 2 3c0 3.314-1.343 6-3 6s-2-1.343-2-3z" transform="rotate(240 12 12)"/></svg>` },
+  { id: 'entrance_humidifier', name: 'Entrance Humidifier', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 Q12 2 7 10 Q5 14 5 16 a7 7 0 0 0 14 0 Q19 14 17 10 Z"/><path d="M9 17 Q10 19 12 19" opacity="0.5"/></svg>` },
+  { id: 'hall_ventilation',    name: 'Hall Ventilation',    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8 Q8 8 8 12 Q8 16 3 16"/><path d="M21 8 Q16 8 16 12 Q16 16 21 16"/><path d="M8 12 L16 12"/></svg>` },
+  { id: 'habitat_heater',      name: 'Habitat Heater',      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 Q10 6 12 8 Q14 10 12 14"/><path d="M8 5 Q6 8 8 10 Q10 12 8 16"/><path d="M16 5 Q14 8 16 10 Q18 12 16 16"/><path d="M5 19 Q5 21 19 21 Q19 19 5 19"/></svg>` },
+];
+
+// ─── STATE ────────────────────────────────
+const sensorState    = {};   // { sensor_id: { value, unit, metric, history[] } }
+const actuatorState  = {};   // { actuator_id: { state, lastChange, triggeredBy } }
+let   editingRuleId  = null;
+
+// ─── INIT ─────────────────────────────────
+window.onload = () => {
+  buildSensorWidgets();
+  buildActuatorWidgets();
+  loadRules();
+  loadActuators();
+  connectWebSocket();
+  startClock();
+};
+
+// ─── NAVIGATION ───────────────────────────
+function goTo(id, el) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
 }
-setInterval(updateClock, 1000);
-updateClock();
 
-// ── Page nav ───────────────────────────────────────────────────────────────
-function showPage(name, btn) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
-  btn.classList.add('active');
+// ─── CLOCK ────────────────────────────────
+function startClock() {
+  function tick() {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('clock').textContent =
+      `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} UTC`;
+
+    // Update "updated X ago" for all sensor widgets
+    Object.entries(sensorState).forEach(([id, state]) => {
+      if (!state.lastUpdate) return;
+      const el = document.getElementById('updated-' + id);
+      if (!el) return;
+      const secs = Math.floor((Date.now() - state.lastUpdate) / 1000);
+      el.textContent = secs < 5 ? 'just now' : `${secs}s ago`;
+    });
+  }
+  tick();
+  setInterval(tick, 1000);
 }
 
-// ── Toast ──────────────────────────────────────────────────────────────────
-let toastTimer;
-function showToast(msg, type = 'ok') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'show ' + (type !== 'ok' ? type : '');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.className = '', 4000);
+// ─── BUILD SENSOR WIDGETS ─────────────────
+function buildSensorWidgets() {
+  REST_SENSORS.forEach(s => {
+    document.getElementById('restSensorGrid').appendChild(createSensorWidget(s, false));
+  });
+  STREAM_SENSORS.forEach(s => {
+    document.getElementById('streamSensorGrid').appendChild(createSensorWidget(s, true));
+  });
 }
 
-// ── WebSocket ──────────────────────────────────────────────────────────────
+function createSensorWidget(sensor, isStream) {
+  const card = document.createElement('div');
+  card.className = 'sensor-card' + (isStream ? ' stream' : '');
+  card.id = 'widget-' + sensor.id;
+  card.innerHTML = `
+    <div class="sensor-id ${isStream ? 'stream-id' : ''}">${sensor.id}</div>
+    <div class="sensor-metrics-grid" id="metrics-${sensor.id}">
+      <div class="metric-item">
+        <div class="metric-value" id="val-${sensor.id}">—</div>
+        <div class="metric-label" id="unit-${sensor.id}">${sensor.unit}</div>
+        <div class="metric-name" id="metric-${sensor.id}">${sensor.metric}</div>
+      </div>
+    </div>
+    <div class="sensor-secondary" id="secondary-${sensor.id}"></div>
+    <div class="sparkline">
+      <svg id="spark-${sensor.id}" viewBox="0 0 120 36" preserveAspectRatio="none">
+        <polyline id="line-${sensor.id}" points="" fill="none"
+          stroke="${isStream ? '#8b5cf6' : '#0ea5e9'}" stroke-width="1.5" opacity="0.8"/>
+      </svg>
+    </div>
+    <div class="sensor-footer">
+      <div class="sensor-status ${isStream ? 'status-stream' : 'status-ok'}" id="status-${sensor.id}">
+        <div class="status-dot ${isStream ? 'dot-purple' : 'dot-green'}"></div>
+        ${isStream ? 'STREAMING' : 'WAITING'}
+      </div>
+      <div class="sensor-updated" id="updated-${sensor.id}">—</div>
+    </div>
+  `;
+  return card;
+}
+
+// ─── UPDATE SENSOR WIDGET ─────────────────
+function updateSensorWidget(sensorId, value, unit, metric) {
+  const widget = document.getElementById('widget-' + sensorId);
+  if (!widget) return;
+
+  const isStream = widget.classList.contains('stream');
+
+  if (!sensorState[sensorId]) sensorState[sensorId] = { history: [], metrics: {} };
+  sensorState[sensorId].value = value;
+  sensorState[sensorId].lastUpdate = Date.now();
+
+  // Store per-metric values
+  if (metric) sensorState[sensorId].metrics[metric] = { value, unit };
+
+  const metrics = sensorState[sensorId].metrics;
+  const metricKeys = Object.keys(metrics);
+
+  // Render all metrics flat in grid — size adapts to count
+  const gridEl = document.getElementById('metrics-' + sensorId);
+  if (gridEl && metricKeys.length > 0) {
+    const count = metricKeys.length;
+    const valueSize = count === 1 ? '28px' : count === 2 ? '22px' : '16px';
+    const cols = count === 1 ? '1fr' : count === 2 ? '1fr 1fr' : 'repeat(auto-fill, minmax(80px, 1fr))';
+    gridEl.style.gridTemplateColumns = cols;
+    gridEl.innerHTML = metricKeys.map(k => {
+      const m = metrics[k];
+      const v = typeof m.value === 'number' ? m.value.toFixed(2) : m.value;
+      return `
+        <div class="metric-item">
+          <div class="metric-value" style="font-size:${valueSize}">${v}</div>
+          <div class="metric-label">${m.unit || ''}</div>
+          <div class="metric-name">${k}</div>
+        </div>`;
+    }).join('');
+  }
+
+  // Track first metric for sparkline
+  const numVal = parseFloat(value);
+  if (!isNaN(numVal)) {
+    sensorState[sensorId].history.push(numVal);
+    if (sensorState[sensorId].history.length > 20) sensorState[sensorId].history.shift();
+    updateSparkline(sensorId, sensorState[sensorId].history);
+    checkThreshold(sensorId, numVal, widget);
+  }
+
+  // Flash on update
+  widget.classList.remove('flash');
+  void widget.offsetWidth;
+  widget.classList.add('flash');
+
+  // Update status
+  const statusEl = document.getElementById('status-' + sensorId);
+  if (statusEl && !widget.classList.contains('alert')) {
+    statusEl.innerHTML = `
+      <div class="status-dot ${isStream ? 'dot-purple' : 'dot-green'}"></div>
+      ${isStream ? 'STREAMING' : 'OK'}
+    `;
+    statusEl.className = `sensor-status ${isStream ? 'status-stream' : 'status-ok'}`;
+  }
+
+  const updatedEl = document.getElementById('updated-' + sensorId);
+  if (updatedEl) updatedEl.textContent = 'just now';
+}
+
+// ─── SPARKLINE ────────────────────────────
+function updateSparkline(sensorId, history) {
+  const line = document.getElementById('line-' + sensorId);
+  if (!line || history.length < 2) return;
+
+  const min = Math.min(...history);
+  const max = Math.max(...history);
+  const range = max - min || 1;
+  const W = 120, H = 36, PAD = 4;
+
+  const points = history.map((v, i) => {
+    const x = (i / (history.length - 1)) * W;
+    const y = PAD + (1 - (v - min) / range) * (H - PAD * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  line.setAttribute('points', points);
+}
+
+// ─── THRESHOLD CHECK (S-03) ───────────────
+function checkThreshold(sensorId, value, widget) {
+  const history = sensorState[sensorId]?.history || [];
+  if (history.length < 3) return;
+
+  const avg = history.slice(0, -1).reduce((a, b) => a + b, 0) / (history.length - 1);
+  const deviation = avg !== 0 ? Math.abs((value - avg) / avg) * 100 : 0;
+
+  const isAlert = deviation > 10;
+  widget.classList.toggle('alert', isAlert);
+
+  // Show/hide alert badge
+  let badge = widget.querySelector('.alert-badge');
+  if (isAlert && !badge) {
+    badge = document.createElement('div');
+    badge.className = 'alert-badge';
+    badge.textContent = '!';
+    widget.appendChild(badge);
+    const statusEl = document.getElementById('status-' + sensorId);
+    if (statusEl) {
+      statusEl.innerHTML = '<div class="status-dot dot-red"></div> THRESHOLD EXCEEDED';
+      statusEl.className = 'sensor-status status-alert';
+    }
+  } else if (!isAlert && badge) {
+    badge.remove();
+  }
+}
+
+// ─── BUILD ACTUATOR WIDGETS ───────────────
+function buildActuatorWidgets() {
+  ACTUATORS.forEach((act, i) => {
+    const card = document.createElement('div');
+    card.className = 'actuator-card off';
+    card.id = 'act-card-' + act.id;
+    card.innerHTML = `
+      <div class="act-header">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="act-icon" id="act-icon-${act.id}">${act.icon}</div>
+          <div>
+            <div class="act-id">ACT-00${i + 1}</div>
+            <div class="act-name">${act.name}</div>
+          </div>
+        </div>
+        <div class="toggle-wrap">
+          <div class="toggle off" id="toggle-${act.id}" onclick="toggleActuator('${act.id}')">
+            <div class="toggle-knob"></div>
+          </div>
+          <div class="toggle-label" id="toggle-label-${act.id}">OFF</div>
+        </div>
+      </div>
+      <div class="act-info" id="act-info-${act.id}">
+        State: <span id="act-state-${act.id}" style="color:var(--muted)">OFF</span>
+        · Last change: <span id="act-time-${act.id}">—</span><br>
+        Triggered by: <span class="trigger-source" id="act-trigger-${act.id}">—</span>
+      </div>
+    `;
+    document.getElementById('actuatorGrid').appendChild(card);
+  });
+}
+
+// ─── UPDATE ACTUATOR WIDGET ───────────────
+function updateActuatorWidget(actuatorId, state, triggeredBy) {
+  const card   = document.getElementById('act-card-' + actuatorId);
+  const toggle = document.getElementById('toggle-' + actuatorId);
+  const label  = document.getElementById('toggle-label-' + actuatorId);
+  const stateEl   = document.getElementById('act-state-' + actuatorId);
+  const timeEl    = document.getElementById('act-time-' + actuatorId);
+  const triggerEl = document.getElementById('act-trigger-' + actuatorId);
+  if (!card) return;
+
+  const isOn = state === 'ON';
+  card.classList.toggle('on', isOn);
+  card.classList.toggle('off', !isOn);
+  toggle.classList.toggle('on', isOn);
+  toggle.classList.toggle('off', !isOn);
+  label.textContent = state;
+  stateEl.textContent = state;
+  stateEl.style.color = isOn ? 'var(--green)' : 'var(--muted)';
+
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  timeEl.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  if (triggerEl && triggeredBy) triggerEl.textContent = triggeredBy;
+
+  actuatorState[actuatorId] = { state, lastChange: now, triggeredBy };
+}
+
+// ─── TOGGLE ACTUATOR (A-03) ───────────────
+async function toggleActuator(actuatorId) {
+  const current = actuatorState[actuatorId]?.state || 'OFF';
+  const newState = current === 'ON' ? 'OFF' : 'ON';
+
+  try {
+    const res = await fetch(`/actuators/${actuatorId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: newState })
+    });
+
+    if (res.ok) {
+      updateActuatorWidget(actuatorId, newState, 'Manual override');
+      // A-05: visual confirmation
+      const card = document.getElementById('act-card-' + actuatorId);
+      card.classList.add('confirmed');
+      setTimeout(() => card.classList.remove('confirmed'), 500);
+      showToast(`${actuatorId} set to ${newState}`);
+    } else {
+      showToast('Command failed — backend error', true);
+    }
+  } catch (e) {
+    // Endpoint not yet available — update UI optimistically
+    updateActuatorWidget(actuatorId, newState, 'Manual override');
+    const card = document.getElementById('act-card-' + actuatorId);
+    card.classList.add('confirmed');
+    setTimeout(() => card.classList.remove('confirmed'), 500);
+    showToast(`${actuatorId} → ${newState} (offline mode)`);
+  }
+}
+
+// ─── LOAD ACTUATORS ───────────────────────
+async function loadActuators() {
+  if (MOCK_MODE) return; // handled by startMockMode
+  try {
+    const res = await fetch('/actuators');
+    if (!res.ok) return;
+    const data = await res.json();
+    data.forEach(act => {
+      updateActuatorWidget(act.id || act.actuator_id, act.state, 'System');
+    });
+  } catch (e) {
+    // endpoint not yet available, skip
+  }
+}
+
+// ─── MOCK MODE (for frontend dev without backend) ─────
+const MOCK_MODE = location.protocol === 'file:' || location.hostname === '127.0.0.1' && location.port === '';
+
+const MOCK_INITIAL = {
+  greenhouse_temperature: { value: 24.07, unit: '°C',    metric: 'temperature' },
+  entrance_humidity:      { value: 39.15, unit: '%',     metric: 'humidity' },
+  co2_hall:               { value: 749.0, unit: 'ppm',   metric: 'co2' },
+  hydroponic_ph:          { value: 6.21,  unit: 'pH',    metric: 'ph' },
+  water_tank_level:       { value: 71.96, unit: '%',     metric: 'level' },
+  corridor_pressure:      { value: 101.2, unit: 'kPa',  metric: 'pressure' },
+  air_quality_pm25:       { value: 13.82, unit: 'µg/m³', metric: 'pm2.5' },
+  air_quality_voc:        { value: 206.9, unit: 'ppb',   metric: 'voc' },
+  solar_array:            { value: 412.5, unit: 'W',     metric: 'power' },
+  radiation:              { value: 0.87,  unit: 'mSv/h', metric: 'radiation' },
+  life_support:           { value: 20.9,  unit: '%O₂',   metric: 'o2' },
+  thermal_loop:           { value: 38.2,  unit: '°C',    metric: 'temperature' },
+  power_bus:              { value: 228.0, unit: 'V',     metric: 'voltage' },
+  power_consumption:      { value: 1840,  unit: 'W',     metric: 'consumption' },
+  airlock:                { value: 'SEALED', unit: '',   metric: 'status' },
+};
+
+const MOCK_ACTUATORS = [
+  { id: 'cooling_fan',         state: 'ON',  triggeredBy: 'Overheat protection rule' },
+  { id: 'entrance_humidifier', state: 'OFF', triggeredBy: 'Manual override' },
+  { id: 'hall_ventilation',    state: 'ON',  triggeredBy: 'CO2 ventilation rule' },
+  { id: 'habitat_heater',      state: 'OFF', triggeredBy: 'Manual override' },
+];
+
+const MOCK_RULES = [
+  { id: 1, name: 'Overheat protection', sensor: 'greenhouse_temperature', operator: '>', threshold: 28, actuator: 'cooling_fan',        action: 'ON',  enabled: true,  last_triggered: '14:23:05 UTC', last_action: 'cooling_fan set ON' },
+  { id: 2, name: 'CO2 ventilation',     sensor: 'co2_hall',               operator: '>', threshold: 1500, actuator: 'hall_ventilation', action: 'ON',  enabled: true,  last_triggered: '14:20:11 UTC', last_action: 'hall_ventilation set ON' },
+  { id: 3, name: 'Low humidity alert',  sensor: 'entrance_humidity',      operator: '<', threshold: 40,   actuator: 'entrance_humidifier', action: 'ON', enabled: false, last_triggered: null, last_action: null },
+];
+
+function startMockMode() {
+  setConnectionStatus(true);
+
+  // Load initial sensor values
+  Object.entries(MOCK_INITIAL).forEach(([id, s]) => {
+    updateSensorWidget(id, s.value, s.unit, s.metric);
+  });
+
+  // Load actuators
+  MOCK_ACTUATORS.forEach(a => updateActuatorWidget(a.id, a.state, a.triggeredBy));
+
+  // Load rules
+  renderRules(MOCK_RULES);
+
+  // Simulate live updates every 3 seconds
+  setInterval(() => {
+    const allSensors = [...REST_SENSORS, ...STREAM_SENSORS];
+    // pick a random sensor and nudge its value
+    const s = allSensors[Math.floor(Math.random() * allSensors.length)];
+    const current = sensorState[s.id]?.value;
+    if (typeof current === 'number') {
+      const nudge = (Math.random() - 0.5) * current * 0.04; // ±2%
+      const newVal = Math.max(0, parseFloat((current + nudge).toFixed(2)));
+      const mock = MOCK_INITIAL[s.id];
+      updateSensorWidget(s.id, newVal, mock?.unit || '', mock?.metric || '');
+    }
+  }, 3000);
+
+  // Simulate occasional threshold breach on co2_hall
+  setInterval(() => {
+    const spike = Math.random() > 0.6;
+    const val = spike ? 1820 + Math.random() * 200 : 749 + Math.random() * 100;
+    updateSensorWidget('co2_hall', parseFloat(val.toFixed(1)), 'ppm', 'co2');
+  }, 8000);
+}
+
+// ─── WEBSOCKET (G-01: auto-reconnect) ─────
 let ws;
-function connectWS() {
+let wsRetryDelay = 1000;
+
+function connectWebSocket() {
+  if (MOCK_MODE) { startMockMode(); return; }
+
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}`);
 
   ws.onopen = () => {
-    document.getElementById('ws-dot').className = 'dot live';
-    document.getElementById('ws-status').textContent = 'LIVE';
+    wsRetryDelay = 1000;
+    setConnectionStatus(true);
   };
-  ws.onclose = () => {
-    document.getElementById('ws-dot').className = 'dot dead';
-    document.getElementById('ws-status').textContent = 'OFFLINE';
-    setTimeout(connectWS, 3000);
-  };
-  ws.onerror = () => {
-    document.getElementById('ws-dot').className = 'dot warn';
-    document.getElementById('ws-status').textContent = 'ERROR';
-  };
-  ws.onmessage = (evt) => {
+
+  ws.onmessage = (event) => {
     try {
-      const msg = JSON.parse(evt.data);
-      if (msg.type === 'sensor_data') handleSensorData(msg.payload);
-      if (msg.type === 'alert')       handleAlert(msg.payload);
-    } catch(e) {}
+      const raw = JSON.parse(event.data);
+      handleIncomingEvent(raw);
+    } catch (e) {
+      console.error('WS parse error', e);
+    }
   };
+
+  ws.onclose = () => {
+    setConnectionStatus(false);
+    setTimeout(() => {
+      wsRetryDelay = Math.min(wsRetryDelay * 2, 30000);
+      connectWebSocket();
+    }, wsRetryDelay);
+  };
+
+  ws.onerror = () => ws.close();
 }
-connectWS();
 
-// ── Sensor data ────────────────────────────────────────────────────────────
-// payload: { timestamp, sensor_id, metric, value, unit, status }
-function handleSensorData(data) {
-  const key = data.sensor_id + ':' + data.metric;
-  sensors[key] = { ...data, ts: new Date() };
-  updateSensorCard(key);
-  appendLog(data);
-  document.getElementById('sensor-count').textContent = Object.keys(sensors).length + ' ACTIVE';
-}
+// ─── HANDLE INCOMING EVENT ────────────────
+function handleIncomingEvent(raw) {
+  // server.js wraps messages as { type: 'sensor_data', payload: {...} }
+  const data = (raw.type === 'sensor_data' && raw.payload) ? raw.payload : raw;
 
-function updateSensorCard(key) {
-  const s = sensors[key];
-  const noEl = document.getElementById('no-sensors');
-  if (noEl) noEl.remove();
+  const sensorId = data.sensor_id || data.sensor || data.type;
+  if (!sensorId) return;
 
-  let card = document.getElementById('sc-' + key.replace(/[^a-z0-9]/gi,'_'));
-  if (!card) {
-    card = document.createElement('div');
-    card.className = 'sensor-card';
-    card.id = 'sc-' + key.replace(/[^a-z0-9]/gi,'_');
-    document.getElementById('sensor-grid').appendChild(card);
+  const value  = data.value ?? data.level_pct ?? data.pm25_ug_m3;
+  const unit   = data.unit   || '';
+  const metric = data.metric || '';
+
+  if (value !== undefined) {
+    updateSensorWidget(sensorId, value, unit, metric);
   }
 
-  const val = typeof s.value === 'number' ? s.value.toFixed(2) : s.value;
-  const timeStr = s.ts.toTimeString().substring(0,8);
-  const statusCls = s.status === 'ok' ? 'ok' : s.status === 'warn' ? 'warn' : 'error';
-
-  card.innerHTML = `
-    <div class="sc-name">${s.sensor_id}</div>
-    <div class="sc-metric">${s.metric}</div>
-    <div class="sc-value">${val}</div>
-    <div class="sc-unit">${s.unit || ''}</div>
-    <div class="sc-time">${timeStr}</div>
-    <span class="sc-status ${statusCls}">${s.status || 'ok'}</span>
-  `;
-
-  card.classList.add('updated');
-  setTimeout(() => card.classList.remove('updated'), 600);
+  // Handle actuator state updates
+  if (data.actuator_id) {
+    updateActuatorWidget(data.actuator_id, data.state || data.action, 'Automation rule');
+  }
 }
 
-function appendLog(data) {
-  const logEl = document.getElementById('event-log');
-  const empty = document.getElementById('log-empty');
-  if (empty) empty.remove();
-
-  logCount++;
-  const entries = logEl.querySelectorAll('.log-entry');
-  if (entries.length >= MAX_LOG) entries[entries.length - 1].remove();
-
-  const timeStr = new Date().toTimeString().substring(0,8);
-  const val = typeof data.value === 'number' ? data.value.toFixed(3) : data.value;
-
-  const entry = document.createElement('div');
-  entry.className = 'log-entry';
-  entry.innerHTML = `
-    <span class="log-time">${timeStr}</span>
-    <span class="log-sensor">${data.sensor_id}</span>
-    <span class="log-metric">${data.metric}</span>
-    <span class="log-val">${val}<span>${data.unit ? ' '+data.unit : ''}</span></span>
-  `;
-  logEl.insertBefore(entry, logEl.firstChild);
+// ─── CONNECTION STATUS (G-02) ─────────────
+function setConnectionStatus(online) {
+  const statusEl = document.getElementById('connStatus');
+  const pulseEl  = document.getElementById('connPulse');
+  const labelEl  = document.getElementById('connLabel');
+  if (!statusEl) return;
+  statusEl.className = 'conn-status ' + (online ? 'online' : 'offline');
+  pulseEl.className  = 'pulse ' + (online ? '' : 'offline');
+  labelEl.textContent = online ? 'WS · CONNECTED' : 'WS · DISCONNECTED · retrying...';
 }
 
-function clearLog() {
-  document.getElementById('event-log').innerHTML = '<div id="log-empty">// CLEARED</div>';
-  logCount = 0;
-}
-
-// ── Alert from automation engine ───────────────────────────────────────────
-function handleAlert(data) {
-  showToast('⚡ ' + data.message, 'alert');
-}
-
-// ── Rules CRUD ─────────────────────────────────────────────────────────────
+// ─── LOAD RULES ───────────────────────────
 async function loadRules() {
+  if (MOCK_MODE) { renderRules(MOCK_RULES); return; }
   try {
-    const res = await fetch('/api/rules');
-    rules = await res.json();
-    renderRules();
-  } catch(e) {
-    showToast('Failed to load rules', 'error');
+    const res  = await fetch('/api/rules');
+    const rules = await res.json();
+    renderRules(rules);
+  } catch (e) {
+    console.error('Failed to load rules', e);
   }
 }
 
-function renderRules() {
-  const tbody = document.getElementById('rules-tbody');
-  document.getElementById('rules-count').textContent = rules.length + ' RULE' + (rules.length !== 1 ? 'S' : '');
+// ─── RENDER RULES TABLE ───────────────────
+function renderRules(rules) {
+  const tbody = document.getElementById('rulesTable');
+  tbody.innerHTML = '';
 
   if (rules.length === 0) {
-    tbody.innerHTML = '<tr id="rules-empty-row"><td colspan="5">// NO RULES DEFINED</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px;font-family:'Share Tech Mono',monospace;font-size:12px">No rules defined — create your first rule</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = rules.map(r => `
-    <tr>
-      <td style="color:var(--text3)">#${r.id}</td>
+  rules.forEach(rule => {
+    const enabled = rule.enabled !== false; // default true if field missing
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
       <td>
-        <span class="tok-sensor">${r.sensor}</span>
-        <span class="tok-attr">.${r.attribute}</span>
-        <span class="tok-op">${r.operator}</span>
-        <span class="tok-val">${r.threshold}</span>
+        <div class="rule-name">${rule.name || '—'}</div>
+        <div class="rule-condition" style="margin-top:4px">
+          ${rule.sensor} ${rule.operator} ${rule.threshold}
+        </div>
       </td>
-      <td><span class="tok-actuator">${r.actuator}</span></td>
-      <td><span class="tok-action">${r.action}</span></td>
-      <td style="text-align:right;white-space:nowrap">
-        <button class="btn-edit" onclick="startEdit(${r.id})">EDIT</button>
-        <button class="btn-danger" onclick="deleteRule(${r.id})">DEL</button>
+      <td><div class="rule-action">${rule.actuator} → ${rule.action}</div></td>
+      <td><span class="pill ${enabled ? 'pill-on' : 'pill-off'}">${enabled ? 'ENABLED' : 'DISABLED'}</span></td>
+      <td>
+        <div class="last-trig">${rule.last_triggered || '— never'}</div>
+        ${rule.last_action ? `<div class="last-trig-action">→ ${rule.last_action}</div>` : ''}
       </td>
-    </tr>
-  `).join('');
+      <td>
+        <div class="action-btns">
+          <div class="icon-btn" title="Edit" onclick="editRule(${JSON.stringify(rule).replace(/"/g, '&quot;')})">✎</div>
+          <div class="icon-btn" title="${enabled ? 'Disable' : 'Enable'}" onclick="toggleRule(${rule.id}, ${enabled})">
+            ${enabled ? '⏸' : '▶'}
+          </div>
+          <div class="icon-btn del" title="Delete" onclick="deleteRule(${rule.id})">✕</div>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
 
-// ── Modal ──────────────────────────────────────────────────────────────────
-function openModal(id) {
-  editingId = id || null;
-  const isEdit = !!id;
+// ─── MODAL ────────────────────────────────
+function openModal(rule) {
+  editingRuleId = null;
+  document.getElementById('modalTitle').textContent = 'NEW AUTOMATION RULE';
+  document.getElementById('editRuleId').value = '';
+  document.getElementById('ruleName').value = '';
+  document.getElementById('ruleSensor').value = 'greenhouse_temperature';
+  document.getElementById('ruleOperator').value = '>';
+  document.getElementById('ruleThreshold').value = '';
+  document.getElementById('ruleActuator').value = 'cooling_fan';
+  document.getElementById('ruleAction').value = 'ON';
+  updatePreview();
+  document.getElementById('modalBackdrop').classList.add('open');
+}
 
-  if (isEdit) {
-    const r = rules.find(x => x.id === id);
-    document.getElementById('f-sensor').value    = r.sensor;
-    document.getElementById('f-attribute').value = r.attribute;
-    document.getElementById('f-operator').value  = r.operator;
-    document.getElementById('f-threshold').value = r.threshold;
-    document.getElementById('f-actuator').value  = r.actuator;
-    document.getElementById('f-action').value    = r.action;
-    document.getElementById('modal-title').textContent = 'EDIT RULE #' + id;
-    document.getElementById('modal-submit-btn').textContent = 'UPDATE RULE';
-    document.getElementById('modal-submit-btn').className  = 'btn btn-update';
-  } else {
-    ['f-sensor','f-attribute','f-threshold','f-actuator','f-action'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('f-operator').value = '>';
-    document.getElementById('modal-title').textContent = 'NEW RULE';
-    document.getElementById('modal-submit-btn').textContent = 'ADD RULE';
-    document.getElementById('modal-submit-btn').className  = 'btn btn-primary';
-  }
-
-  document.getElementById('modal-overlay').classList.add('open');
+function editRule(rule) {
+  editingRuleId = rule.id;
+  document.getElementById('modalTitle').textContent = 'EDIT AUTOMATION RULE';
+  document.getElementById('editRuleId').value = rule.id;
+  document.getElementById('ruleName').value = rule.name || '';
+  document.getElementById('ruleSensor').value = rule.sensor;
+  document.getElementById('ruleOperator').value = rule.operator;
+  document.getElementById('ruleThreshold').value = rule.threshold;
+  document.getElementById('ruleActuator').value = rule.actuator;
+  document.getElementById('ruleAction').value = rule.action;
+  updatePreview();
+  document.getElementById('modalBackdrop').classList.add('open');
 }
 
 function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
-  editingId = null;
+  document.getElementById('modalBackdrop').classList.remove('open');
+  editingRuleId = null;
 }
 
-function closeModalOutside(e) {
-  if (e.target === document.getElementById('modal-overlay')) closeModal();
+// AU-07: live rule preview
+function updatePreview() {
+  const sensor    = document.getElementById('ruleSensor')?.value || '—';
+  const operator  = document.getElementById('ruleOperator')?.value || '—';
+  const threshold = document.getElementById('ruleThreshold')?.value || '—';
+  const actuator  = document.getElementById('ruleActuator')?.value || '—';
+  const action    = document.getElementById('ruleAction')?.value || '—';
+  document.getElementById('rulePreview').textContent =
+    `IF ${sensor} ${operator} ${threshold} THEN set ${actuator} to ${action}`;
 }
 
-function startEdit(id) { openModal(id); }
-
-async function submitRule() {
-  const body = {
-    sensor:    document.getElementById('f-sensor').value.trim(),
-    attribute: document.getElementById('f-attribute').value.trim(),
-    operator:  document.getElementById('f-operator').value,
-    threshold: parseFloat(document.getElementById('f-threshold').value),
-    actuator:  document.getElementById('f-actuator').value.trim(),
-    action:    document.getElementById('f-action').value.trim(),
+// ─── SAVE RULE (AU-01 / AU-02) ────────────
+async function saveRule() {
+  const rule = {
+    name:      document.getElementById('ruleName').value || 'Unnamed rule',
+    sensor:    document.getElementById('ruleSensor').value,
+    operator:  document.getElementById('ruleOperator').value,
+    threshold: parseFloat(document.getElementById('ruleThreshold').value),
+    actuator:  document.getElementById('ruleActuator').value,
+    action:    document.getElementById('ruleAction').value,
   };
 
-  if (!body.sensor || !body.attribute || !body.actuator || !body.action || isNaN(body.threshold)) {
-    showToast('All fields are required', 'error');
-    return;
-  }
+  if (isNaN(rule.threshold)) { showToast('Please enter a valid threshold', true); return; }
 
   try {
-    const url    = editingId ? `/api/rules/${editingId}` : '/api/rules';
-    const method = editingId ? 'PUT' : 'POST';
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new Error();
-    showToast(editingId ? 'Rule updated' : 'Rule created');
-    closeModal();
-    loadRules();
-  } catch(e) {
-    showToast('Failed to save rule', 'error');
+    let res;
+    if (editingRuleId) {
+      // AU-02: edit
+      res = await fetch(`/api/rules/${editingRuleId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rule)
+      });
+    } else {
+      // AU-01: create
+      res = await fetch('/api/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rule)
+      });
+    }
+
+    if (res.ok) {
+      closeModal();
+      loadRules();
+      showToast(editingRuleId ? 'Rule updated' : 'Rule created');
+    } else {
+      showToast('Failed to save rule', true);
+    }
+  } catch (e) {
+    showToast('Network error', true);
   }
 }
 
+// ─── DELETE RULE (AU-03) ──────────────────
 async function deleteRule(id) {
-  if (!confirm(`Delete rule #${id}?`)) return;
+  if (!confirm('Delete this rule?')) return;
   try {
     const res = await fetch(`/api/rules/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error();
-    showToast('Rule deleted');
-    loadRules();
-  } catch(e) {
-    showToast('Failed to delete rule', 'error');
-  }
+    if (res.ok) { loadRules(); showToast('Rule deleted'); }
+    else showToast('Failed to delete', true);
+  } catch (e) { showToast('Network error', true); }
 }
 
-// ── Init ───────────────────────────────────────────────────────────────────
-loadRules();
+// ─── TOGGLE RULE ENABLED (AU-05) ──────────
+async function toggleRule(id, currentlyEnabled) {
+  try {
+    const res = await fetch(`/api/rules/${id}/toggle`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: !currentlyEnabled })
+    });
+    if (res.ok) { loadRules(); showToast(currentlyEnabled ? 'Rule disabled' : 'Rule enabled'); }
+    else {
+      // endpoint may not exist yet — update UI anyway
+      showToast('Toggle endpoint not yet available', true);
+    }
+  } catch (e) { showToast('Network error', true); }
+}
+
+// ─── TOAST ────────────────────────────────
+function showToast(message, isError = false) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = 'toast' + (isError ? ' error' : '');
+  void toast.offsetWidth;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2800);
+}
 </script>
 </body>
 </html>

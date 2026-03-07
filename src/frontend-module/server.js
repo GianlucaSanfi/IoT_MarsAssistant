@@ -52,6 +52,9 @@ async function startRabbitMQConsumer() {
       await channel.assertExchange(telemetryExchange, 'topic', { durable: true });
       const tq = await channel.assertQueue('frontend-telemetry', { exclusive: false, durable: true });
       await channel.bindQueue(tq.queue, telemetryExchange, 'sensors.normalized');
+      await channel.bindQueue(tq.queue, telemetryExchange, 'telemetry.normalized');
+
+      
 
       channel.consume(tq.queue, (msg) => {
         if (msg !== null) {
