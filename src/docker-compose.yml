@@ -1,6 +1,17 @@
 services:
 
   # ---------------------------------------------------------------------------
+  # Mars IoT Simulator
+  # ---------------------------------------------------------------------------
+  simulator:
+    image: mars-iot-simulator:multiarch_v1
+    container_name: mars-simulator
+    ports:
+      - "8080:8080"
+    networks:
+      - iot-net
+
+  # ---------------------------------------------------------------------------
   # Message Broker
   # ---------------------------------------------------------------------------
   rabbitmq:
@@ -22,7 +33,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 20s
-
     networks:
       - iot-net
 
@@ -81,7 +91,7 @@ services:
       - iot-net
 
   # ---------------------------------------------------------------------------
-  # Ingestion System (Ex-standalone)
+  # Ingestion System
   # ---------------------------------------------------------------------------
   sensor_poller:
     build:
@@ -93,10 +103,10 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      simulator:
+        condition: service_started
     environment:
-      API_BASE_URL: ${API_BASE_URL:-http://host.docker.internal:8080}
+      API_BASE_URL: ${API_BASE_URL:-http://simulator:8080}
       SENSOR_POLL_INTERVAL_SEC: ${SENSOR_POLL_INTERVAL_SEC:-10}
       SENSOR_POLL_TIMEOUT_SEC:  ${SENSOR_POLL_TIMEOUT_SEC:-5}
       PUBLISHER_TYPE: rabbitmq
@@ -109,7 +119,6 @@ services:
       RABBITMQ_SENSOR_ROUTING_KEY: ${RABBITMQ_SENSOR_ROUTING_KEY:-sensors.normalized}
       RABBITMQ_STARTUP_RETRY_DELAY_SEC: 3
       RABBITMQ_STARTUP_MAX_RETRIES: 20
-
     networks:
       - iot-net
 
@@ -123,10 +132,10 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      simulator:
+        condition: service_started
     environment:
-      API_BASE_URL: ${API_BASE_URL:-http://host.docker.internal:8080}
+      API_BASE_URL: ${API_BASE_URL:-http://simulator:8080}
       TELEMETRY_RECONNECT_DELAY_SEC: ${TELEMETRY_RECONNECT_DELAY_SEC:-5}
       TELEMETRY_STREAM_TIMEOUT_SEC:  ${TELEMETRY_STREAM_TIMEOUT_SEC:-30}
       PUBLISHER_TYPE: rabbitmq
@@ -139,14 +148,12 @@ services:
       RABBITMQ_TELEMETRY_ROUTING_KEY: ${RABBITMQ_TELEMETRY_ROUTING_KEY:-telemetry.normalized}
       RABBITMQ_STARTUP_RETRY_DELAY_SEC: 3
       RABBITMQ_STARTUP_MAX_RETRIES: 20
-    
     networks:
       - iot-net
 
 volumes:
   rabbitmq_data:
   postgres_data:
-
 
 networks:
   iot-net:

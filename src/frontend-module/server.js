@@ -24,9 +24,22 @@ const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://rabbitmq';
 
 // ─── WebSocket broadcast ──────────────────────────────────────────────────
 const clients = new Set();
+const sensorCache = {}; // { sensor_id: { timestamp, sensor_id, metric, value, unit, status } }
 
 wss.on('connection', (ws) => {
   clients.add(ws);
+  // Send current sensor state to new client immediately
+  if (Object.keys(sensorCache).length > 0) {
+    Object.values(sensorCache).forEach(payload => {
+      ws.send(JSON.stringify({ type: 'sensor_data', payload }));
+    });
+  }
+  // Send current actuator state to new client
+  ACTUATOR_IDS.forEach(id => {
+    if (actuatorState[id]) {
+      ws.send(JSON.stringify({ type: 'actuator_update', payload: { id, ...actuatorState[id] } }));
+    }
+  });
   ws.on('close', () => clients.delete(ws));
 });
 
@@ -58,6 +71,8 @@ async function startRabbitMQConsumer() {
         if (msg !== null) {
           try {
             const data = JSON.parse(msg.content.toString());
+            // Update in-memory sensor cache with latest state
+            if (data.sensor_id) sensorCache[data.sensor_id] = data;
             broadcast({ type: 'sensor_data', payload: data });
           } catch (e) {
             console.error('Failed to parse telemetry message:', e);
