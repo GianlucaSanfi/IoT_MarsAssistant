@@ -119,7 +119,7 @@ body::after {
 .nav-section {
   padding: 0 16px; margin-bottom: 6px; margin-top: 20px;
   font-family: 'Share Tech Mono', monospace; font-size: 9px;
-  letter-spacing: 2px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 2px; color: var(--accent); text-transform: uppercase; opacity: 0.7;
 }
 .nav-item {
   display: flex; align-items: center; gap: 10px;
@@ -129,15 +129,16 @@ body::after {
   font-weight: 500; color: var(--muted); position: relative;
 }
 .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.02); }
-.nav-item.active { color: var(--blue2); border-left-color: var(--blue); background: rgba(14,165,233,0.06); }
+.nav-item.active { color: #fb8c6a; border-left-color: var(--accent); background: rgba(232,66,10,0.08); }
 .nav-icon { width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .nav-icon svg { width: 16px; height: 16px; }
 .nav-divider { height: 1px; background: var(--border); margin: 12px 16px; }
 
 /* MAIN */
-.main { overflow-y: auto; padding: 24px; }
+.main { overflow-y: auto; overflow-x: visible; padding: 24px; }
 .screen { display: none; }
 .screen.active { display: block; }
+
 
 /* PAGE HEADER */
 .page-header {
@@ -145,8 +146,8 @@ body::after {
   justify-content: space-between;
   margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
 }
-.page-title { font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 700; color: #fff; letter-spacing: 1px; }
-.page-sub { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; }
+.page-title { font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+.page-sub { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 4px; letter-spacing: 1px; }
 .live-tag {
   display: flex; align-items: center; gap: 6px;
   font-family: 'Share Tech Mono', monospace; font-size: 10px;
@@ -156,35 +157,85 @@ body::after {
 
 /* DIVIDER */
 .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0 16px; }
-.divider-label { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.divider-label { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--blue2); white-space: nowrap; }
 .divider-line { flex: 1; height: 1px; background: var(--border); }
 
 /* SENSOR GRID */
-.sensor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.sensor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 24px; padding: 8px; margin: -8px -8px 16px -8px; }
 
 .sensor-card {
   background: var(--card); border: 1px solid var(--border);
   border-radius: 8px; padding: 16px; position: relative;
-  overflow: hidden; transition: border-color 0.2s, transform 0.2s;
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.7);
+  height: 230px; display: flex; flex-direction: column;
+  overflow: hidden;
 }
 .sensor-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0;
-  height: 2px; background: linear-gradient(90deg, var(--blue), transparent); opacity: 0.6;
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); opacity: 1;
 }
-.sensor-card.stream::before { background: linear-gradient(90deg, var(--purple), transparent); }
-.sensor-card:hover { border-color: var(--border2); transform: translateY(-1px); }
-.sensor-card.alert { border-color: rgba(239,68,68,0.5); animation: alertPulse 1.5s ease-in-out infinite; }
-.sensor-card.alert::before { background: linear-gradient(90deg, var(--red), transparent); opacity: 1; }
-@keyframes alertPulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0)} 50%{box-shadow:0 0 0 4px rgba(239,68,68,0.15)} }
+.sensor-card.stream::before { background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); }
+.sensor-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 2px 4px rgba(0,0,0,0.7); }
 
-/* Flash on update — S-04b */
-@keyframes flashUpdate { 0%{background:rgba(14,165,233,0.15);border-color:var(--blue)} 100%{background:transparent} }
-@keyframes flashUpdateStream { 0%{background:rgba(139,92,246,0.15);border-color:var(--purple)} 100%{background:transparent} }
-.sensor-card.flash { animation: flashUpdate 0.6s ease-out; }
-.sensor-card.flash.stream { animation: flashUpdateStream 0.6s ease-out; }
+/* SENSOR CARD WRAPPER — carries the alert glow, never clipped */
+.sensor-card-wrap {
+  position: relative; border-radius: 8px;
+  transition: box-shadow 0.2s, outline 0.2s;
+}
+@keyframes alertGlow {
+  0%,100% {
+    box-shadow: 0 0 10px 3px rgba(239,68,68,0.35);
+    outline: 1.5px solid rgba(239,68,68,0.5);
+  }
+  50% {
+    box-shadow: 0 0 30px 10px rgba(239,68,68,0.65);
+    outline: 1.5px solid rgba(239,68,68,1);
+  }
+}
+.sensor-card-wrap.alert {
+  animation: alertGlow 1.6s ease-in-out infinite;
+  border-radius: 8px;
+}
+.sensor-card-wrap.alert .sensor-card::before {
+  bottom: auto; top: 0;
+  background: linear-gradient(90deg, var(--red), transparent); opacity: 1;
+}
 
-.sensor-id { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-bottom: 8px; text-transform: uppercase; }
-.sensor-id.stream-id { color: #a78bfa; }
+/* Flash on update — value highlight only */
+@keyframes flashUpdate { 0%{background:rgba(14,165,233,0.04);} 100%{background:transparent} }
+@keyframes flashUpdateStream { 0%{background:rgba(139,92,246,0.04);} 100%{background:transparent} }
+.sensor-card.flash { animation: flashUpdate 1.2s ease-out; }
+.sensor-card.flash.stream { animation: flashUpdateStream 1.2s ease-out; }
+
+/* Value highlight on update */
+@keyframes valueFlash { 0%,100%{color:#fff} 30%{color:#38bdf8; text-shadow: 0 0 12px rgba(56,189,248,0.8);} }
+@keyframes valueFlashStream { 0%,100%{color:#fff} 30%{color:#a78bfa; text-shadow: 0 0 12px rgba(167,139,250,0.8);} }
+.metric-value.updated { animation: valueFlash 0.6s ease-out; }
+.sensor-card.stream .metric-value.updated { animation: valueFlashStream 0.6s ease-out; }
+
+/* CRT scanlines on sensor cards */
+.sensor-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0,0,0,0.03) 3px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none; z-index: 1;
+}
+
+/* Sensor ID — primary label, prominent */
+.sensor-id {
+  font-family: 'Exo 2', sans-serif; font-size: 13px; font-weight: 600;
+  color: var(--blue2); letter-spacing: 0.5px;
+  margin-bottom: 10px; text-transform: uppercase; flex-shrink: 0;
+}
+.sensor-id.stream-id { color: #c4b5fd; }
+
 .sensor-value-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; }
 .sensor-value { font-family: 'Orbitron', sans-serif; font-size: 30px; font-weight: 700; color: #fff; line-height: 1; }
 .sensor-unit { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--muted); }
@@ -194,33 +245,35 @@ body::after {
 .sensor-metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 8px; margin-bottom: 10px;
+  gap: 6px; margin-bottom: 8px; flex: 1; align-content: start;
+  overflow: hidden;
 }
 .metric-item {
   background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
-  border-radius: 5px; padding: 7px 8px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 5px; padding: 6px 8px;
 }
 .metric-value {
   font-family: 'Orbitron', sans-serif; font-size: 16px;
-  font-weight: 700; color: #fff; line-height: 1; margin-bottom: 2px;
+  font-weight: 700; color: #fff; line-height: 1.1; margin-bottom: 4px;
+  word-break: break-word; overflow-wrap: break-word;
 }
 .metric-label {
   font-family: 'Share Tech Mono', monospace; font-size: 10px;
-  color: var(--blue2); margin-bottom: 3px;
+  color: var(--muted); margin-bottom: 2px;
 }
 .metric-name {
   font-family: 'Share Tech Mono', monospace; font-size: 9px;
-  color: var(--muted); letter-spacing: 0.5px;
+  color: rgba(255,255,255,0.3); letter-spacing: 0.5px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.sparkline { height: 36px; margin-bottom: 8px; }
+.sparkline { height: 32px; margin-bottom: 8px; opacity: 0.8; flex-shrink: 0; }
 .sparkline svg { width: 100%; height: 100%; }
-.sensor-status { display: flex; align-items: center; gap: 6px; font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 1px; }
+.sensor-status { display: flex; align-items: center; gap: 5px; font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1.5px; }
 .status-ok { color: var(--green); }
 .status-alert { color: var(--red); }
 .status-stream { color: #a78bfa; }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; }
+.status-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
 .dot-green { background: var(--green); box-shadow: 0 0 4px var(--green); }
 .dot-red { background: var(--red); box-shadow: 0 0 4px var(--red); animation: pulse 1s infinite; }
 .dot-purple { background: var(--purple); box-shadow: 0 0 4px var(--purple); }
@@ -233,11 +286,12 @@ body::after {
 }
 
 /* ACTUATOR GRID */
-.actuator-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.actuator-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .actuator-card {
   background: var(--card); border: 1px solid var(--border);
-  border-radius: 8px; padding: 18px; position: relative;
-  overflow: hidden; transition: all 0.2s;
+  border-radius: 8px; padding: 28px 22px; position: relative;
+  overflow: hidden; transition: all 0.2s; min-height: 220px;
+  display: flex; flex-direction: column; justify-content: space-between;
 }
 .actuator-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
 .actuator-card.on::before { background: linear-gradient(90deg, var(--green), transparent); }
@@ -248,9 +302,9 @@ body::after {
 @keyframes flashConfirm { 0%{box-shadow:0 0 0 0 rgba(14,165,233,0.6)} 100%{box-shadow:0 0 0 12px rgba(14,165,233,0)} }
 .actuator-card.confirmed { animation: flashConfirm 0.5s ease-out; }
 
-.act-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.act-header { display: flex; flex-direction: column; margin-bottom: 14px; }
 .act-id { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
-.act-name { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 600; color: #fff; }
+.act-name { font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 600; color: #fff; line-height: 1.3; }
 .toggle-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .toggle {
   width: 52px; height: 28px; border-radius: 14px;
@@ -273,12 +327,12 @@ body::after {
 .table-title { font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 600; color: #fff; letter-spacing: 1px; }
 .btn-new {
   display: flex; align-items: center; gap: 6px;
-  padding: 7px 16px; background: rgba(14,165,233,0.1);
-  border: 1px solid rgba(14,165,233,0.4); border-radius: 5px;
-  color: var(--blue2); font-family: 'Share Tech Mono', monospace;
+  padding: 7px 16px; background: rgba(232,66,10,0.1);
+  border: 1px solid rgba(232,66,10,0.4); border-radius: 5px;
+  color: #fb8c6a; font-family: 'Share Tech Mono', monospace;
   font-size: 11px; letter-spacing: 1px; cursor: pointer; transition: all 0.15s;
 }
-.btn-new:hover { background: rgba(14,165,233,0.2); }
+.btn-new:hover { background: rgba(232,66,10,0.2); }
 table { width: 100%; border-collapse: collapse; }
 th { text-align: left; padding: 10px 18px; font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.01); }
 td { padding: 12px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
@@ -300,7 +354,7 @@ tr:hover td { background: rgba(255,255,255,0.01); }
 /* MODAL */
 .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(4,8,15,0.85); z-index: 200; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
 .modal-backdrop.open { display: flex; }
-.modal { background: var(--card); border: 1px solid var(--border2); border-radius: 10px; width: 520px; max-width: 90vw; box-shadow: 0 0 60px rgba(14,165,233,0.1), 0 30px 60px rgba(0,0,0,0.5); overflow: hidden; }
+.modal { background: var(--card); border: 1px solid var(--border2); border-radius: 10px; width: 520px; max-width: 90vw; box-shadow: 0 0 60px rgba(232,66,10,0.1), 0 30px 60px rgba(0,0,0,0.5); overflow: hidden; }
 .modal-top { background: var(--surface); padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
 .modal-title { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; color: #fff; letter-spacing: 1px; }
 .modal-close { width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
@@ -310,14 +364,14 @@ tr:hover td { background: rgba(255,255,255,0.01); }
 .form-group { flex: 1; min-width: 100px; display: flex; flex-direction: column; gap: 5px; }
 .form-label { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
 .form-input, .form-select { background: var(--surface); border: 1px solid var(--border2); border-radius: 5px; padding: 8px 12px; color: var(--text); font-family: 'Share Tech Mono', monospace; font-size: 12px; outline: none; transition: border-color 0.15s; width: 100%; appearance: none; }
-.form-input:focus, .form-select:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(14,165,233,0.1); }
+.form-input:focus, .form-select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(232,66,10,0.15); }
 .rule-preview { margin: 16px 0; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border2); border-radius: 5px; border-left: 3px solid var(--blue); font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--blue2); min-height: 40px; }
 .then-sep { text-align: center; font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--muted); letter-spacing: 2px; margin: 14px 0; display: flex; align-items: center; gap: 10px; }
 .then-sep::before, .then-sep::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 .modal-footer { padding: 16px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
 .btn { padding: 9px 20px; border-radius: 5px; font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 1px; cursor: pointer; transition: all 0.15s; border: none; }
-.btn-primary { background: var(--blue); color: var(--bg); font-weight: 700; }
-.btn-primary:hover { background: var(--blue2); box-shadow: 0 0 16px rgba(14,165,233,0.3); }
+.btn-primary { background: var(--accent); color: #fff; font-weight: 700; }
+.btn-primary:hover { background: #ff5a1f; box-shadow: 0 0 16px rgba(232,66,10,0.4); }
 .btn-ghost { background: transparent; border: 1px solid var(--border2); color: var(--muted); }
 .btn-ghost:hover { border-color: var(--muted); color: var(--text); }
 
@@ -359,14 +413,93 @@ tr:hover td { background: rgba(255,255,255,0.01); }
 
 /* ACTUATOR ICON */
 .act-icon {
-  width: 32px; height: 32px; flex-shrink: 0;
+  width: 48px; height: 48px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 6px; background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border); color: var(--muted);
-  transition: color 0.2s, border-color 0.2s;
+  border-radius: 10px; background: rgba(232,66,10,0.08);
+  border: 1px solid rgba(232,66,10,0.25); color: #fb8c6a;
+  transition: color 0.2s, border-color 0.2s; margin-bottom: 16px;
 }
-.act-icon svg { width: 18px; height: 18px; }
+.act-icon svg { width: 26px; height: 26px; }
 .actuator-card.on .act-icon { color: var(--green); border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.08); }
+
+/* SENSOR DETAIL POPUP */
+.sensor-popup-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75); z-index: 400;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.sensor-popup-backdrop.open { display: flex; }
+.sensor-popup {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 10px; width: 720px; max-width: 95vw;
+  max-height: 88vh; display: flex; flex-direction: column;
+  animation: slideUp 0.2s ease;
+}
+.sensor-popup-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.sensor-popup-title {
+  font-family: 'Orbitron', sans-serif; font-size: 14px;
+  font-weight: 700; color: #fff; letter-spacing: 1px;
+}
+.sensor-popup-sub {
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  color: var(--muted); margin-top: 3px; letter-spacing: 1px;
+}
+.sensor-popup-body {
+  flex: 1; overflow-y: auto; padding: 20px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+/* Charts section */
+.popup-charts { display: grid; gap: 12px; }
+.popup-chart-item {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 6px; padding: 12px 14px;
+}
+.popup-chart-label {
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  color: var(--muted); letter-spacing: 1px; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.popup-chart-val {
+  font-family: 'Orbitron', sans-serif; font-size: 20px;
+  font-weight: 700; color: #fff;
+}
+.popup-chart-unit { color: var(--blue2); font-size: 12px; }
+.popup-sparkline { height: 48px; margin-top: 8px; }
+.popup-sparkline svg { width: 100%; height: 100%; }
+
+/* Log section */
+.popup-log-title {
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  letter-spacing: 2px; color: var(--muted); text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.popup-log-table { width: 100%; border-collapse: collapse; }
+.popup-log-table th {
+  font-family: 'Share Tech Mono', monospace; font-size: 9px;
+  letter-spacing: 1px; color: var(--muted); text-transform: uppercase;
+  padding: 6px 10px; border-bottom: 1px solid var(--border);
+  text-align: left; background: var(--card);
+}
+.popup-log-table td {
+  font-family: 'Share Tech Mono', monospace; font-size: 11px;
+  padding: 6px 10px; border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.popup-log-table tr:last-child td { border-bottom: none; }
+.popup-log-table tr:hover td { background: rgba(255,255,255,0.02); }
+.log-metric-name { color: var(--blue2); }
+.log-value { color: #fff; font-weight: 600; }
+.log-unit { color: var(--muted); }
+.log-ts { color: var(--muted); font-size: 10px; }
+
+/* Clickable sensor card */
+.sensor-card { cursor: pointer; }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -463,15 +596,15 @@ tr:hover td { background: rgba(255,255,255,0.01); }
         <div class="live-tag"><div class="pulse"></div> LIVE · WebSocket</div>
       </div>
       <div class="divider">
-        <div class="divider-line"></div>
-        <div class="divider-label">REST SENSORS · 8 devices</div>
-        <div class="divider-line"></div>
+        <div class="divider-line" style="background:linear-gradient(90deg,transparent,rgba(14,165,233,0.4))"></div>
+        <div class="divider-label" style="color:var(--blue2)">REST SENSORS · 8 DEVICES</div>
+        <div class="divider-line" style="background:linear-gradient(90deg,rgba(14,165,233,0.4),transparent)"></div>
       </div>
       <div class="sensor-grid" id="restSensorGrid"></div>
       <div class="divider" style="margin-top:28px">
-        <div class="divider-line"></div>
-        <div class="divider-label">TELEMETRY STREAMS · 7 SSE/WS topics</div>
-        <div class="divider-line"></div>
+        <div class="divider-line" style="background:linear-gradient(90deg,transparent,rgba(139,92,246,0.4))"></div>
+        <div class="divider-label" style="color:#a78bfa">TELEMETRY STREAMS · 7 SSE/WS TOPICS</div>
+        <div class="divider-line" style="background:linear-gradient(90deg,rgba(139,92,246,0.4),transparent)"></div>
       </div>
       <div class="sensor-grid" id="streamSensorGrid"></div>
     </div>
@@ -493,7 +626,7 @@ tr:hover td { background: rgba(255,255,255,0.01); }
       <div class="page-header">
         <div>
           <div class="page-title">AUTOMATION RULES</div>
-          <div class="page-sub">// IF–THEN RULE ENGINE · POSTGRESQL PERSISTED</div>
+          <div class="page-sub">// IF–THEN RULE ENGINE</div>
         </div>
       </div>
       <div class="table-wrap">
@@ -517,6 +650,20 @@ tr:hover td { background: rgba(255,255,255,0.01); }
     </div>
 
   </main>
+</div>
+
+<!-- SENSOR DETAIL POPUP -->
+<div class="sensor-popup-backdrop" id="sensorPopupBackdrop" onclick="if(event.target===this)closeSensorPopup()">
+  <div class="sensor-popup">
+    <div class="sensor-popup-header">
+      <div>
+        <div class="sensor-popup-title" id="popupTitle">—</div>
+        <div class="sensor-popup-sub" id="popupSub">—</div>
+      </div>
+      <div class="modal-close" onclick="closeSensorPopup()">✕</div>
+    </div>
+    <div class="sensor-popup-body" id="popupBody"></div>
+  </div>
 </div>
 
 <!-- MODAL — CREATE / EDIT RULE -->
@@ -686,9 +833,14 @@ function buildSensorWidgets() {
 }
 
 function createSensorWidget(sensor, isStream) {
+  const wrap = document.createElement('div');
+  wrap.className = 'sensor-card-wrap';
+  wrap.id = 'wrap-' + sensor.id;
+
   const card = document.createElement('div');
   card.className = 'sensor-card' + (isStream ? ' stream' : '');
   card.id = 'widget-' + sensor.id;
+  card.onclick = () => openSensorPopup(sensor.id);
   card.innerHTML = `
     <div class="sensor-id ${isStream ? 'stream-id' : ''}">${sensor.id}</div>
     <div class="sensor-metrics-grid" id="metrics-${sensor.id}">
@@ -713,7 +865,8 @@ function createSensorWidget(sensor, isStream) {
       <div class="sensor-updated" id="updated-${sensor.id}">—</div>
     </div>
   `;
-  return card;
+  wrap.appendChild(card);
+  return wrap;
 }
 
 // ─── UPDATE SENSOR WIDGET ─────────────────
@@ -723,12 +876,27 @@ function updateSensorWidget(sensorId, value, unit, metric) {
 
   const isStream = widget.classList.contains('stream');
 
-  if (!sensorState[sensorId]) sensorState[sensorId] = { history: [], metrics: {} };
+  if (!sensorState[sensorId]) sensorState[sensorId] = { history: [], metrics: {}, log: [] };
   sensorState[sensorId].value = value;
   sensorState[sensorId].lastUpdate = Date.now();
 
   // Store per-metric values
   if (metric) sensorState[sensorId].metrics[metric] = { value, unit };
+
+  // Append to log (max 50 entries)
+  if (metric) {
+    sensorState[sensorId].log.unshift({ ts: new Date(), metric, value, unit });
+    if (sensorState[sensorId].log.length > 50) sensorState[sensorId].log.pop();
+  }
+
+  // Per-metric history for sparklines
+  if (metric) {
+    if (!sensorState[sensorId].metricHistory) sensorState[sensorId].metricHistory = {};
+    if (!sensorState[sensorId].metricHistory[metric]) sensorState[sensorId].metricHistory[metric] = [];
+    const mh = sensorState[sensorId].metricHistory[metric];
+    mh.push(parseFloat(value) || 0);
+    if (mh.length > 20) mh.shift();
+  }
 
   const metrics = sensorState[sensorId].metrics;
   const metricKeys = Object.keys(metrics);
@@ -743,23 +911,26 @@ function updateSensorWidget(sensorId, value, unit, metric) {
     gridEl.innerHTML = metricKeys.map(k => {
       const m = metrics[k];
       const v = typeof m.value === 'number' ? m.value.toFixed(2) : m.value;
+      const isStr = typeof m.value === 'string';
+      const sz = isStr ? '11px' : valueSize;
       return `
         <div class="metric-item">
-          <div class="metric-value" style="font-size:${valueSize}">${v}</div>
+          <div class="metric-value updated" style="font-size:${sz}">${v}</div>
           <div class="metric-label">${m.unit || ''}</div>
           <div class="metric-name">${k}</div>
         </div>`;
     }).join('');
   }
 
-  // Track first metric for sparkline
+  // Track ONLY first metric for main sparkline
+  const firstMetric = metricKeys[0];
   const numVal = parseFloat(value);
-  if (!isNaN(numVal)) {
+  if (!isNaN(numVal) && metric === firstMetric) {
     sensorState[sensorId].history.push(numVal);
     if (sensorState[sensorId].history.length > 20) sensorState[sensorId].history.shift();
     updateSparkline(sensorId, sensorState[sensorId].history);
-    checkThreshold(sensorId, numVal, widget);
   }
+  checkThreshold(sensorId, numVal, widget);
 
   // Flash on update
   widget.classList.remove('flash');
@@ -778,6 +949,9 @@ function updateSensorWidget(sensorId, value, unit, metric) {
 
   const updatedEl = document.getElementById('updated-' + sensorId);
   if (updatedEl) updatedEl.textContent = 'just now';
+
+  // Refresh popup if open for this sensor
+  if (activeSensorPopup === sensorId) refreshSensorPopup(sensorId);
 }
 
 // ─── SPARKLINE ────────────────────────────
@@ -808,7 +982,9 @@ function checkThreshold(sensorId, value, widget) {
   const deviation = avg !== 0 ? Math.abs((value - avg) / avg) * 100 : 0;
 
   const isAlert = deviation > 10;
-  widget.classList.toggle('alert', isAlert);
+  const wrap = document.getElementById('wrap-' + sensorId);
+  if (wrap) wrap.classList.toggle('alert', isAlert);
+  widget.classList.toggle('alert', isAlert); // keep for ::before styling
 
   // Show/hide alert badge
   let badge = widget.querySelector('.alert-badge');
@@ -834,25 +1010,27 @@ function buildActuatorWidgets() {
     card.className = 'actuator-card off';
     card.id = 'act-card-' + act.id;
     card.innerHTML = `
-      <div class="act-header">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="act-icon" id="act-icon-${act.id}">${act.icon}</div>
-          <div>
-            <div class="act-id">ACT-00${i + 1}</div>
-            <div class="act-name">${act.name}</div>
-          </div>
-        </div>
-        <div class="toggle-wrap">
-          <div class="toggle off" id="toggle-${act.id}" onclick="toggleActuator('${act.id}')">
-            <div class="toggle-knob"></div>
-          </div>
-          <div class="toggle-label" id="toggle-label-${act.id}">OFF</div>
+      <div>
+        <div class="act-icon" id="act-icon-${act.id}">${act.icon}</div>
+        <div class="act-header">
+          <div class="act-id">ACT-00${i + 1}</div>
+          <div class="act-name">${act.name}</div>
         </div>
       </div>
-      <div class="act-info" id="act-info-${act.id}">
-        State: <span id="act-state-${act.id}" style="color:var(--muted)">OFF</span>
-        · Last change: <span id="act-time-${act.id}">—</span><br>
-        Triggered by: <span class="trigger-source" id="act-trigger-${act.id}">—</span>
+      <div>
+        <div class="toggle-wrap" style="flex-direction:row;align-items:center;gap:12px;justify-content:space-between">
+          <div class="act-info" id="act-info-${act.id}" style="margin:0;padding:0;border:none">
+            State: <span id="act-state-${act.id}" style="color:var(--muted)">OFF</span>
+            · Last change: <span id="act-time-${act.id}">—</span><br>
+            Triggered by: <span class="trigger-source" id="act-trigger-${act.id}">—</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <div class="toggle off" id="toggle-${act.id}" onclick="toggleActuator('${act.id}')">
+              <div class="toggle-knob"></div>
+            </div>
+            <div class="toggle-label" id="toggle-label-${act.id}">OFF</div>
+          </div>
+        </div>
       </div>
     `;
     document.getElementById('actuatorGrid').appendChild(card);
@@ -1235,6 +1413,101 @@ async function toggleRule(id, currentlyEnabled) {
       showToast('Toggle endpoint not yet available', true);
     }
   } catch (e) { showToast('Network error', true); }
+}
+
+// ─── SENSOR DETAIL POPUP (S-01) ──────────
+let activeSensorPopup = null;
+
+function openSensorPopup(sensorId) {
+  activeSensorPopup = sensorId;
+  document.getElementById('sensorPopupBackdrop').classList.add('open');
+  refreshSensorPopup(sensorId);
+}
+
+function closeSensorPopup() {
+  document.getElementById('sensorPopupBackdrop').classList.remove('open');
+  activeSensorPopup = null;
+}
+
+function refreshSensorPopup(sensorId) {
+  const state = sensorState[sensorId];
+  const isStream = document.getElementById('widget-' + sensorId)?.classList.contains('stream');
+  const accentColor = isStream ? '#8b5cf6' : '#0ea5e9';
+
+  document.getElementById('popupTitle').textContent = sensorId.toUpperCase();
+  document.getElementById('popupSub').textContent = isStream ? 'TELEMETRY STREAM' : 'REST SENSOR';
+
+  const body = document.getElementById('popupBody');
+  if (!state) { body.innerHTML = '<div style="color:var(--muted);font-family:Share Tech Mono,monospace;font-size:12px">No data received yet</div>'; return; }
+
+  const metrics = state.metrics || {};
+  const metricKeys = Object.keys(metrics);
+  const metricHistory = state.metricHistory || {};
+
+  // Charts
+  const chartCols = metricKeys.length === 1 ? '1fr' : metricKeys.length === 2 ? '1fr 1fr' : 'repeat(auto-fill, minmax(200px, 1fr))';
+  const chartsHTML = `
+    <div>
+      <div class="popup-log-title">Live Charts</div>
+      <div class="popup-charts" style="grid-template-columns:${chartCols}">
+        ${metricKeys.map(k => {
+          const m = metrics[k];
+          const v = typeof m.value === 'number' ? m.value.toFixed(2) : m.value;
+          const hist = metricHistory[k] || [];
+          const points = buildSparklinePoints(hist, 300, 48);
+          return `
+            <div class="popup-chart-item">
+              <div class="popup-chart-label">
+                <span class="log-metric-name">${k}</span>
+                <span class="log-unit">${m.unit || ''}</span>
+              </div>
+              <div class="popup-chart-val">${v} <span class="popup-chart-unit">${m.unit || ''}</span></div>
+              <div class="popup-sparkline">
+                <svg viewBox="0 0 300 48" preserveAspectRatio="none">
+                  <polyline points="${points}" fill="none" stroke="${accentColor}" stroke-width="2" opacity="0.9"/>
+                </svg>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  // Log
+  const log = state.log || [];
+  const logRows = log.map(entry => {
+    const v = typeof entry.value === 'number' ? entry.value.toFixed(3) : entry.value;
+    const ts = entry.ts.toTimeString().substring(0, 8);
+    return `<tr>
+      <td class="log-ts">${ts}</td>
+      <td class="log-metric-name">${entry.metric}</td>
+      <td class="log-value">${v}</td>
+      <td class="log-unit">${entry.unit || ''}</td>
+    </tr>`;
+  }).join('');
+
+  const logHTML = `
+    <div>
+      <div class="popup-log-title">Data Log · last ${log.length} entries</div>
+      <table class="popup-log-table">
+        <thead><tr><th>Time</th><th>Metric</th><th>Value</th><th>Unit</th></tr></thead>
+        <tbody>${logRows || '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">No data yet</td></tr>'}</tbody>
+      </table>
+    </div>`;
+
+  body.innerHTML = chartsHTML + logHTML;
+}
+
+function buildSparklinePoints(history, W, H) {
+  if (history.length < 2) return '';
+  const min = Math.min(...history);
+  const max = Math.max(...history);
+  const range = max - min || 1;
+  const PAD = 4;
+  return history.map((v, i) => {
+    const x = (i / (history.length - 1)) * W;
+    const y = PAD + (1 - (v - min) / range) * (H - PAD * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
 }
 
 // ─── TOAST ────────────────────────────────
