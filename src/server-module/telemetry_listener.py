@@ -9,10 +9,12 @@
 # Comportamento:
 #   1. Recupera la lista dei topic disponibili dall'API
 #   2. Avvia un thread dedicato per ogni topic
-#   3. Ogni thread si connette allo stream SSE e rimane in ascolto
+#   3. Ogni thread crea il PROPRIO publisher (connessione RabbitMQ indipendente)
+#      → risolve il problema di thread-safety di pika.BlockingConnection
+#   4. Ogni thread si connette allo stream SSE e rimane in ascolto
 #      per tutti gli eventi che l'endpoint invia nel tempo
-#   4. Ad ogni evento ricevuto: normalizza → pubblica
-#   5. Se la connessione SSE cade, il thread si riconnette automaticamente
+#   5. Ad ogni evento ricevuto: normalizza → pubblica
+#   6. Se la connessione SSE cade, il thread si riconnette automaticamente
 #      dopo TELEMETRY_RECONNECT_DELAY_SEC secondi
 #
 # Gestione graceful shutdown: SIGINT / SIGTERM fermano tutti i thread.
@@ -27,12 +29,13 @@ import signal
 import sys
 import threading
 import time
+from typing import Callable
 
 import requests
 
 import config
 import normalize
-from publisher import get_publisher, BasePublisher
+from publisher import get_publisher_factory, BasePublisher
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -92,7 +95,7 @@ def _iter_sse_events(response: requests.Response):
 
             # MANTENIAMO SOLO LE RIGHE CHE INIZIANO CON "data:"
             data_parts = [
-                l[len("data:") :].lstrip() for l in event_lines if l.startswith("data:")
+                l[len("data:"):].lstrip() for l in event_lines if l.startswith("data:")
             ]
 
             # Se l'evento non conteneva dati (es. solo heartbeat o id), skippa
@@ -119,62 +122,103 @@ def _iter_sse_events(response: requests.Response):
 # ---------------------------------------------------------------------------
 
 
-def _topic_worker(topic: str, publisher: BasePublisher) -> None:
+def _topic_worker(topic: str, publisher_factory: Callable[[], BasePublisher]) -> None:
     """
     Thread dedicato a un singolo topic SSE.
+
+    Crea il proprio publisher al primo avvio e ad ogni riconnessione
+    (dopo un errore che ha corrotto lo stato della connessione).
+    In questo modo ogni thread possiede una connessione RabbitMQ
+    completamente indipendente, rispettando il vincolo di
+    non-thread-safety di pika.BlockingConnection.
+
     Si connette allo stream e rimane in ascolto finché _stop_event non viene
     impostato o si verifica un errore, dopodichè tenta la riconnessione.
     """
     stream_url = f"{config.API_BASE_URL}/api/telemetry/stream/{topic}"
     log = logging.getLogger(f"telemetry.{topic}")
 
-    while not _stop_event.is_set():
-        log.info("Connessione al topic '%s'…", topic)
-        try:
-            with requests.get(
-                stream_url,
-                stream=True,
-                timeout=(
-                    config.SENSOR_POLL_TIMEOUT_SEC,
-                    config.TELEMETRY_STREAM_TIMEOUT_SEC,
-                ),
-            ) as resp:
-                resp.raise_for_status()
-                log.info("Connesso. In ascolto…")
+    publisher: BasePublisher | None = None
 
-                for event in _iter_sse_events(resp):
-                    if _stop_event.is_set():
-                        break
+    try:
+        while not _stop_event.is_set():
 
-                    if not isinstance(event, dict):
-                        log.debug("Evento non-JSON ignorato: %s", event)
-                        continue
+            # Crea (o ricrea) il publisher all'inizio di ogni ciclo di
+            # connessione SSE. In caso di errore il publisher precedente
+            # viene chiuso prima di aprirne uno nuovo.
+            if publisher is not None:
+                try:
+                    publisher.close()
+                except Exception:
+                    pass
+                publisher = None
 
-                    log.debug("Evento ricevuto: %s", event)
+            try:
+                publisher = publisher_factory()
+            except Exception as exc:
+                log.error(
+                    "Impossibile creare publisher per il topic '%s': %s — "
+                    "nuovo tentativo tra %ss…",
+                    topic, exc, config.TELEMETRY_RECONNECT_DELAY_SEC,
+                )
+                _stop_event.wait(timeout=config.TELEMETRY_RECONNECT_DELAY_SEC)
+                continue
 
-                    # Normalizza e pubblica
-                    records = normalize.normalize_telemetry([event])
-                    publisher.publish_batch(records)
-                    log.info(
-                        "Pubblicati %d record dal topic '%s'.", len(records), topic
-                    )
+            log.info("Connessione al topic '%s'…", topic)
+            try:
+                with requests.get(
+                    stream_url,
+                    stream=True,
+                    timeout=(
+                        config.SENSOR_POLL_TIMEOUT_SEC,
+                        config.TELEMETRY_STREAM_TIMEOUT_SEC,
+                    ),
+                ) as resp:
+                    resp.raise_for_status()
+                    log.info("Connesso. In ascolto…")
 
-        except requests.exceptions.HTTPError as exc:
-            log.error("HTTP error sul topic '%s': %s", topic, exc)
-        except requests.exceptions.ConnectionError as exc:
-            log.warning("Connessione persa sul topic '%s': %s", topic, exc)
-        except requests.exceptions.Timeout:
-            log.warning("Timeout sullo stream del topic '%s'.", topic)
-        except Exception as exc:
-            log.error("Errore inatteso sul topic '%s': %s", topic, exc)
+                    for event in _iter_sse_events(resp):
+                        if _stop_event.is_set():
+                            break
 
-        if not _stop_event.is_set():
-            log.info(
-                "Riconnessione al topic '%s' tra %ss…",
-                topic,
-                config.TELEMETRY_RECONNECT_DELAY_SEC,
-            )
-            _stop_event.wait(timeout=config.TELEMETRY_RECONNECT_DELAY_SEC)
+                        if not isinstance(event, dict):
+                            log.debug("Evento non-JSON ignorato: %s", event)
+                            continue
+
+                        log.debug("Evento ricevuto: %s", event)
+
+                        # Normalizza e pubblica
+                        records = normalize.normalize_telemetry([event])
+                        publisher.publish_batch(records)
+                        log.info(
+                            "Pubblicati %d record dal topic '%s'.", len(records), topic
+                        )
+
+            except requests.exceptions.HTTPError as exc:
+                log.error("HTTP error sul topic '%s': %s", topic, exc)
+            except requests.exceptions.ConnectionError as exc:
+                log.warning("Connessione persa sul topic '%s': %s", topic, exc)
+            except requests.exceptions.Timeout:
+                log.warning("Timeout sullo stream del topic '%s'.", topic)
+            except Exception as exc:
+                log.error("Errore inatteso sul topic '%s': %s", topic, exc)
+
+            if not _stop_event.is_set():
+                log.info(
+                    "Riconnessione al topic '%s' tra %ss…",
+                    topic,
+                    config.TELEMETRY_RECONNECT_DELAY_SEC,
+                )
+                _stop_event.wait(timeout=config.TELEMETRY_RECONNECT_DELAY_SEC)
+
+    finally:
+        # Chiusura garantita del publisher del thread anche in caso di
+        # eccezioni non gestite o shutdown.
+        if publisher is not None:
+            try:
+                publisher.close()
+            except Exception as exc:
+                log.warning("Errore chiusura publisher del topic '%s': %s", topic, exc)
 
     log.info("Thread '%s' terminato.", topic)
 
@@ -196,32 +240,31 @@ def _fetch_topic_list() -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def run(publisher: BasePublisher) -> None:
+def run(publisher_factory: Callable[[], BasePublisher]) -> None:
     logger.info(
-        "Telemetry listener avviato — publisher: %s",
-        type(publisher).__name__,
+        "Telemetry listener avviato — publisher factory: %s",
+        publisher_factory,
     )
 
     try:
         topics = _fetch_topic_list()
     except requests.RequestException as exc:
         logger.error("Impossibile recuperare lista topic: %s", exc)
-        publisher.close()
         return
 
     if not topics:
         logger.warning("Nessun topic disponibile. Uscita.")
-        publisher.close()
         return
 
     logger.info("Topic disponibili: %s", topics)
 
-    # Avvia un thread per ogni topic
+    # Avvia un thread per ogni topic.
+    # Ogni thread riceve la factory e crea autonomamente il proprio publisher.
     threads: list[threading.Thread] = []
     for topic in topics:
         t = threading.Thread(
             target=_topic_worker,
-            args=(topic, publisher),
+            args=(topic, publisher_factory),
             name=f"sse-{topic}",
             daemon=True,
         )
@@ -232,7 +275,6 @@ def run(publisher: BasePublisher) -> None:
     # Attende che tutti i thread terminino (o che arrivi lo stop)
     try:
         while not _stop_event.is_set():
-            # Controlla se qualche thread è già morto inaspettatamente
             alive = [t for t in threads if t.is_alive()]
             if not alive:
                 logger.info("Tutti i thread terminati.")
@@ -242,7 +284,6 @@ def run(publisher: BasePublisher) -> None:
         _stop_event.set()
         for t in threads:
             t.join(timeout=5)
-        publisher.close()
         logger.info("Telemetry listener fermato.")
 
 
@@ -266,8 +307,9 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = parse_args()
-    pub = get_publisher(
+    factory = get_publisher_factory(
         publisher_type=args.publisher,
         routing_key=config.RABBITMQ_TELEMETRY_ROUTING_KEY,
     )
-    run(pub)
+    run(factory)
+    

@@ -233,3 +233,32 @@ def get_publisher(
         return PrintPublisher()
 
     raise ValueError(f"Publisher non supportato: '{ptype}'. Valori validi: 'print', 'rabbitmq'.")
+
+def get_publisher_factory(
+    publisher_type: str | None = None,
+    routing_key: str = config.RABBITMQ_SENSOR_ROUTING_KEY,
+):
+    """
+    Restituisce una callable (factory) che crea un publisher indipendente
+    ogni volta che viene invocata.
+
+    Uso tipico in ambienti multi-thread:
+
+        factory = get_publisher_factory(publisher_type="rabbitmq", routing_key=...)
+        # In ogni thread:
+        pub = factory()
+        pub.publish(record)
+        pub.close()
+
+    In questo modo ogni thread possiede la propria connessione RabbitMQ,
+    rispettando il vincolo di non-thread-safety di pika.BlockingConnection.
+    """
+    ptype = (publisher_type or config.PUBLISHER_TYPE).lower()
+
+    if ptype not in ("rabbitmq", "print"):
+        raise ValueError(f"Publisher non supportato: '{ptype}'. Valori validi: 'print', 'rabbitmq'.")
+
+    def factory() -> BasePublisher:
+        return get_publisher(publisher_type=ptype, routing_key=routing_key)
+
+    return factory
