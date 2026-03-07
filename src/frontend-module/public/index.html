@@ -870,7 +870,7 @@ function createSensorWidget(sensor, isStream) {
 }
 
 // ─── UPDATE SENSOR WIDGET ─────────────────
-function updateSensorWidget(sensorId, value, unit, metric) {
+function updateSensorWidget(sensorId, value, unit, metric, status) {
   const widget = document.getElementById('widget-' + sensorId);
   if (!widget) return;
 
@@ -880,12 +880,12 @@ function updateSensorWidget(sensorId, value, unit, metric) {
   sensorState[sensorId].value = value;
   sensorState[sensorId].lastUpdate = Date.now();
 
-  // Store per-metric values
-  if (metric) sensorState[sensorId].metrics[metric] = { value, unit };
+  // Store per-metric values (with status)
+  if (metric) sensorState[sensorId].metrics[metric] = { value, unit, status };
 
   // Append to log (max 50 entries)
   if (metric) {
-    sensorState[sensorId].log.unshift({ ts: new Date(), metric, value, unit });
+    sensorState[sensorId].log.unshift({ ts: new Date(), metric, value, unit, status });
     if (sensorState[sensorId].log.length > 50) sensorState[sensorId].log.pop();
   }
 
@@ -930,21 +930,38 @@ function updateSensorWidget(sensorId, value, unit, metric) {
     if (sensorState[sensorId].history.length > 20) sensorState[sensorId].history.shift();
     updateSparkline(sensorId, sensorState[sensorId].history);
   }
-  checkThreshold(sensorId, numVal, widget);
+
+  // Alert based on status field from payload
+  const isAlert = status === 'warning' || status === 'critical' || status === 'error';
+  const wrap = document.getElementById('wrap-' + sensorId);
+  if (wrap) wrap.classList.toggle('alert', isAlert);
+  widget.classList.toggle('alert', isAlert);
+
+  let badge = widget.querySelector('.alert-badge');
+  if (isAlert && !badge) {
+    badge = document.createElement('div');
+    badge.className = 'alert-badge';
+    badge.textContent = '!';
+    widget.appendChild(badge);
+  } else if (!isAlert && badge) {
+    badge.remove();
+  }
 
   // Flash on update
   widget.classList.remove('flash');
   void widget.offsetWidth;
   widget.classList.add('flash');
 
-  // Update status
+  // Update status label
   const statusEl = document.getElementById('status-' + sensorId);
-  if (statusEl && !widget.classList.contains('alert')) {
-    statusEl.innerHTML = `
-      <div class="status-dot ${isStream ? 'dot-purple' : 'dot-green'}"></div>
-      ${isStream ? 'STREAMING' : 'OK'}
-    `;
-    statusEl.className = `sensor-status ${isStream ? 'status-stream' : 'status-ok'}`;
+  if (statusEl) {
+    if (isAlert) {
+      statusEl.innerHTML = '<div class="status-dot dot-red"></div> SENSOR ALERT';
+      statusEl.className = 'sensor-status status-alert';
+    } else {
+      statusEl.innerHTML = `<div class="status-dot ${isStream ? 'dot-purple' : 'dot-green'}"></div> ${isStream ? 'STREAMING' : 'OK'}`;
+      statusEl.className = `sensor-status ${isStream ? 'status-stream' : 'status-ok'}`;
+    }
   }
 
   const updatedEl = document.getElementById('updated-' + sensorId);
@@ -973,35 +990,6 @@ function updateSparkline(sensorId, history) {
   line.setAttribute('points', points);
 }
 
-// ─── THRESHOLD CHECK (S-03) ───────────────
-function checkThreshold(sensorId, value, widget) {
-  const history = sensorState[sensorId]?.history || [];
-  if (history.length < 3) return;
-
-  const avg = history.slice(0, -1).reduce((a, b) => a + b, 0) / (history.length - 1);
-  const deviation = avg !== 0 ? Math.abs((value - avg) / avg) * 100 : 0;
-
-  const isAlert = deviation > 10;
-  const wrap = document.getElementById('wrap-' + sensorId);
-  if (wrap) wrap.classList.toggle('alert', isAlert);
-  widget.classList.toggle('alert', isAlert); // keep for ::before styling
-
-  // Show/hide alert badge
-  let badge = widget.querySelector('.alert-badge');
-  if (isAlert && !badge) {
-    badge = document.createElement('div');
-    badge.className = 'alert-badge';
-    badge.textContent = '!';
-    widget.appendChild(badge);
-    const statusEl = document.getElementById('status-' + sensorId);
-    if (statusEl) {
-      statusEl.innerHTML = '<div class="status-dot dot-red"></div> THRESHOLD EXCEEDED';
-      statusEl.className = 'sensor-status status-alert';
-    }
-  } else if (!isAlert && badge) {
-    badge.remove();
-  }
-}
 
 // ─── BUILD ACTUATOR WIDGETS ───────────────
 function buildActuatorWidgets() {
@@ -1227,9 +1215,10 @@ function handleIncomingEvent(raw) {
   const value  = data.value ?? data.level_pct ?? data.pm25_ug_m3;
   const unit   = data.unit   || '';
   const metric = data.metric || '';
+  const status = data.status || 'ok';
 
   if (value !== undefined) {
-    updateSensorWidget(sensorId, value, unit, metric);
+    updateSensorWidget(sensorId, value, unit, metric, status);
   }
 
   // Handle actuator state updates
