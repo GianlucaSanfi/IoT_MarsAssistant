@@ -1,0 +1,12 @@
+{
+  "name": "automation-engine",
+  "version": "1.0.0",
+  "main": "engine.js",
+  "scripts": {
+    "start": "node engine.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.3",
+    "pg": "^8.11.3"
+  }
+}

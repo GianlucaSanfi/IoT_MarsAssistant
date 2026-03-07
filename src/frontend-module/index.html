@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IoT Control Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0a0c0f;
+    --bg2:     #0f1217;
+    --bg3:     #151921;
+    --border:  #1e2533;
+    --border2: #2a3347;
+    --accent:  #00d4ff;
+    --accent2: #0099cc;
+    --green:   #00ff88;
+    --yellow:  #ffcc00;
+    --red:     #ff4455;
+    --orange:  #ff8800;
+    --text:    #c8d8e8;
+    --text2:   #6a7d94;
+    --text3:   #3a4d60;
+    --mono:    'Share Tech Mono', monospace;
+    --sans:    'Barlow', sans-serif;
+    --cond:    'Barlow Condensed', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.025) 2px, rgba(0,0,0,0.025) 4px);
+    pointer-events: none; z-index: 9999;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon { width: 32px; height: 32px; }
+  .logo-icon svg { width: 100%; height: 100%; }
+  .logo-text { font-family: var(--cond); font-size: 20px; font-weight: 700; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; }
+  .logo-sub  { font-family: var(--mono); font-size: 9px; color: var(--text2); letter-spacing: 2px; text-transform: uppercase; margin-top: -2px; }
+  .status-bar { display: flex; align-items: center; gap: 20px; }
+  .status-pill { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--text2); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+  .dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  .dot.warn { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+  .dot.dead { background: var(--red);    box-shadow: 0 0 6px var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  #clock { font-family: var(--mono); font-size: 12px; color: var(--text2); letter-spacing: 1px; }
+
+  /* ── Nav tabs ── */
+  .nav-tabs {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 0; padding: 0 24px;
+  }
+  .nav-tab {
+    font-family: var(--cond); font-size: 13px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text2); padding: 10px 20px;
+    border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all .15s;
+    background: none; border-top: none; border-left: none; border-right: none;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── Pages ── */
+  .page { display: none; }
+  .page.active { display: flex; flex-direction: column; }
+
+  /* ── Dashboard layout ── */
+  .dash-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: calc(100vh - 96px);
+  }
+
+  /* ── Panels ── */
+  .panel {
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .panel:nth-child(2) { border-right: none; }
+  .panel-header {
+    padding: 10px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .panel-title {
+    font-family: var(--cond); font-size: 13px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text); display: flex; align-items: center; gap: 8px;
+  }
+  .label-tag {
+    font-family: var(--mono); font-size: 9px; color: var(--text3);
+    letter-spacing: 1px; padding: 2px 6px; border: 1px solid var(--border2);
+  }
+  .panel-body { flex: 1; overflow-y: auto; }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  /* ── Sensor grid ── */
+  #sensor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 1px; background: var(--border);
+  }
+  .sensor-card {
+    background: var(--bg); padding: 14px 16px;
+    position: relative; overflow: hidden; transition: background .2s;
+  }
+  .sensor-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent2); transform: scaleX(0); transform-origin: left; transition: transform .3s;
+  }
+  .sensor-card.updated::before { transform: scaleX(1); }
+  .sensor-card.updated { background: #0d1520; }
+  .sc-name  { font-family: var(--mono); font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sc-metric{ font-family: var(--mono); font-size: 9px;  color: var(--text3); margin-bottom: 6px; }
+  .sc-value { font-family: var(--mono); font-size: 24px; color: var(--accent); line-height: 1; }
+  .sc-unit  { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .sc-time  { font-family: var(--mono); font-size: 9px;  color: var(--text3); margin-top: 6px; }
+  .sc-status{ display: inline-block; font-family: var(--mono); font-size: 8px; padding: 1px 5px; margin-top: 4px; border: 1px solid; text-transform: uppercase; letter-spacing: 1px; }
+  .sc-status.ok   { color: var(--green);  border-color: var(--green); }
+  .sc-status.warn { color: var(--yellow); border-color: var(--yellow); }
+  .sc-status.error{ color: var(--red);    border-color: var(--red); }
+  #no-sensors { padding: 48px; text-align: center; color: var(--text3); font-family: var(--mono); font-size: 12px; grid-column: 1/-1; }
+
+  /* ── Event log ── */
+  .log-entry {
+    display: grid; grid-template-columns: 88px 90px 90px 1fr;
+    padding: 6px 16px; border-bottom: 1px solid var(--border);
+    font-family: var(--mono); font-size: 11px;
+    animation: fadeIn .25s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;background:#0d2030} to{opacity:1} }
+  .log-time   { color: var(--text3); }
+  .log-sensor { color: var(--accent2); }
+  .log-metric { color: var(--text2); }
+  .log-val    { color: var(--text); }
+  .log-val span { color: var(--text3); }
+  #log-empty { padding: 48px; text-align: center; color: var(--text3); font-family: var(--mono); font-size: 12px; }
+
+  /* ── Rules page ── */
+  .rules-page { height: calc(100vh - 96px); display: flex; flex-direction: column; }
+  .rules-toolbar {
+    padding: 12px 20px; background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .rules-toolbar-left { display: flex; align-items: center; gap: 12px; }
+  .count-badge { font-family: var(--mono); font-size: 10px; color: var(--text3); background: var(--bg3); padding: 3px 10px; border: 1px solid var(--border); }
+
+  /* Rules table */
+  .rules-table-wrap { flex: 1; overflow-y: auto; }
+  .rules-table { width: 100%; border-collapse: collapse; }
+  .rules-table th {
+    font-family: var(--cond); font-size: 11px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase; color: var(--text2);
+    padding: 8px 16px; text-align: left;
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+  }
+  .rules-table td {
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    font-family: var(--mono); font-size: 12px; vertical-align: middle;
+  }
+  .rules-table tr:hover td { background: var(--bg2); }
+  .tok-sensor   { color: var(--accent); }
+  .tok-attr     { color: var(--accent2); }
+  .tok-op       { color: var(--yellow); padding: 0 3px; }
+  .tok-val      { color: var(--green); }
+  .tok-arrow    { color: var(--text3); padding: 0 4px; }
+  .tok-actuator { color: var(--text2); }
+  .tok-action   { color: var(--orange); }
+  #rules-empty-row td { padding: 48px; text-align: center; color: var(--text3); }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.7); z-index: 500;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border2);
+    width: 480px; max-width: 95vw;
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .modal-header {
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-family: var(--cond); font-size: 15px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
+  .modal-close { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 4px; }
+  .modal-close:hover { color: var(--text); }
+  .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* ── Form elements ── */
+  .field-group { display: flex; flex-direction: column; gap: 4px; }
+  .field-row   { display: grid; gap: 12px; }
+  .field-row.col2 { grid-template-columns: 1fr 1fr; }
+  .field-row.col3 { grid-template-columns: 1fr 80px 100px; }
+  label { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+  input, select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border2);
+    color: var(--text); padding: 8px 10px;
+    font-family: var(--mono); font-size: 12px;
+    outline: none; transition: border-color .15s; -webkit-appearance: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--bg2); }
+  .field-divider { height: 1px; background: var(--border); margin: 2px 0; }
+
+  /* ── Buttons ── */
+  .btn { cursor: pointer; font-family: var(--cond); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 8px 18px; border: none; transition: all .15s; }
+  .btn-primary  { background: var(--accent); color: var(--bg); }
+  .btn-primary:hover { background: #00b8e0; }
+  .btn-update   { background: var(--yellow); color: var(--bg); }
+  .btn-update:hover { background: #e6b800; }
+  .btn-ghost    { background: none; border: 1px solid var(--border2); color: var(--text2); }
+  .btn-ghost:hover { border-color: var(--text2); color: var(--text); }
+  .btn-sm { padding: 4px 10px; font-size: 10px; }
+  .btn-danger { background: none; border: 1px solid var(--border2); color: var(--text2); cursor: pointer; font-family: var(--mono); font-size: 10px; padding: 4px 10px; text-transform: uppercase; letter-spacing: 1px; transition: all .15s; }
+  .btn-danger:hover { border-color: var(--red); color: var(--red); }
+  .btn-edit { background: none; border: 1px solid var(--border2); color: var(--text2); cursor: pointer; font-family: var(--mono); font-size: 10px; padding: 4px 10px; text-transform: uppercase; letter-spacing: 1px; transition: all .15s; }
+  .btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--bg2); border: 1px solid var(--border2); border-left: 3px solid var(--green);
+    padding: 12px 20px; font-family: var(--mono); font-size: 12px; color: var(--text);
+    opacity: 0; transform: translateY(10px); transition: all .3s;
+    z-index: 1000; pointer-events: none; max-width: 420px;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.error { border-left-color: var(--red); }
+  #toast.alert { border-left-color: var(--orange); }
+
+  @media (max-width: 800px) {
+    .dash-layout { grid-template-columns: 1fr; height: auto; }
+    .panel { min-height: 280px; border-right: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="30" height="30" rx="2" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="16" cy="16" r="6" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="16" cy="16" r="2" fill="#00d4ff"/>
+        <line x1="16" y1="1" x2="16" y2="10" stroke="#00d4ff" stroke-width="1.5"/>
+        <line x1="16" y1="22" x2="16" y2="31" stroke="#00d4ff" stroke-width="1.5"/>
+        <line x1="1"  y1="16" x2="10" y2="16" stroke="#00d4ff" stroke-width="1.5"/>
+        <line x1="22" y1="16" x2="31" y2="16" stroke="#00d4ff" stroke-width="1.5"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-text">IOT HUB</div>
+      <div class="logo-sub">Control &amp; Automation</div>
+    </div>
+  </div>
+  <div class="status-bar">
+    <div class="status-pill">
+      <div class="dot" id="ws-dot"></div>
+      <span id="ws-status">CONNECTING</span>
+    </div>
+    <div id="clock"></div>
+  </div>
+</header>
+
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="showPage('dashboard', this)">DASHBOARD</button>
+  <button class="nav-tab"        onclick="showPage('rules', this)">AUTOMATION RULES</button>
+</div>
+
+<!-- ── DASHBOARD PAGE ── -->
+<div class="page active" id="page-dashboard">
+  <div class="dash-layout">
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">LIVE SENSORS <span class="label-tag">FEED</span></div>
+        <div id="sensor-count" class="count-badge">0 ACTIVE</div>
+      </div>
+      <div class="panel-body">
+        <div id="sensor-grid">
+          <div id="no-sensors">// WAITING FOR SENSOR DATA</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">EVENT LOG <span class="label-tag">STREAM</span></div>
+        <button class="btn btn-ghost btn-sm" onclick="clearLog()">CLEAR</button>
+      </div>
+      <div class="panel-body">
+        <div id="event-log">
+          <div id="log-empty">// NO EVENTS YET</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── RULES PAGE ── -->
+<div class="page" id="page-rules">
+  <div class="rules-page">
+    <div class="rules-toolbar">
+      <div class="rules-toolbar-left">
+        <div class="panel-title">AUTOMATION RULES <span class="label-tag">ENGINE</span></div>
+        <div id="rules-count" class="count-badge">0 RULES</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal()">+ NEW RULE</button>
+    </div>
+    <div class="rules-table-wrap">
+      <table class="rules-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Condition</th>
+            <th>Actuator</th>
+            <th>Action</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="rules-tbody">
+          <tr id="rules-empty-row"><td colspan="5">// NO RULES DEFINED</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── RULE MODAL ── -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">NEW RULE</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1px;">
+        // IF sensor.attribute matches condition → trigger actuator action
+      </div>
+
+      <div class="field-row col3">
+        <div class="field-group">
+          <label>Sensor ID</label>
+          <input id="f-sensor" type="text" placeholder="e.g. co2_hall"/>
+        </div>
+        <div class="field-group">
+          <label>Operator</label>
+          <select id="f-operator">
+            <option value=">">&gt;</option>
+            <option value="<">&lt;</option>
+            <option value=">=">&gt;=</option>
+            <option value="<=">&lt;=</option>
+            <option value="==">==</option>
+            <option value="!=">!=</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Threshold</label>
+          <input id="f-threshold" type="number" placeholder="1000" step="any"/>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Attribute (metric)</label>
+        <input id="f-attribute" type="text" placeholder="e.g. co2_ppm"/>
+      </div>
+
+      <div class="field-divider"></div>
+
+      <div class="field-row col2">
+        <div class="field-group">
+          <label>Actuator ID</label>
+          <input id="f-actuator" type="text" placeholder="e.g. ventilation_01"/>
+        </div>
+        <div class="field-group">
+          <label>Action</label>
+          <input id="f-action" type="text" placeholder="e.g. ON"/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">CANCEL</button>
+      <button class="btn btn-primary" id="modal-submit-btn" onclick="submitRule()">ADD RULE</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const sensors = {};   // keyed by sensor_id:metric
+let rules = [];
+let editingId = null;
+let logCount = 0;
+const MAX_LOG = 300;
+
+// ── Clock ──────────────────────────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clock').textContent =
+    new Date().toISOString().replace('T',' ').substring(0,19);
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Page nav ───────────────────────────────────────────────────────────────
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + (type !== 'ok' ? type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 4000);
+}
+
+// ── WebSocket ──────────────────────────────────────────────────────────────
+let ws;
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+
+  ws.onopen = () => {
+    document.getElementById('ws-dot').className = 'dot live';
+    document.getElementById('ws-status').textContent = 'LIVE';
+  };
+  ws.onclose = () => {
+    document.getElementById('ws-dot').className = 'dot dead';
+    document.getElementById('ws-status').textContent = 'OFFLINE';
+    setTimeout(connectWS, 3000);
+  };
+  ws.onerror = () => {
+    document.getElementById('ws-dot').className = 'dot warn';
+    document.getElementById('ws-status').textContent = 'ERROR';
+  };
+  ws.onmessage = (evt) => {
+    try {
+      const msg = JSON.parse(evt.data);
+      if (msg.type === 'sensor_data') handleSensorData(msg.payload);
+      if (msg.type === 'alert')       handleAlert(msg.payload);
+    } catch(e) {}
+  };
+}
+connectWS();
+
+// ── Sensor data ────────────────────────────────────────────────────────────
+// payload: { timestamp, sensor_id, metric, value, unit, status }
+function handleSensorData(data) {
+  const key = data.sensor_id + ':' + data.metric;
+  sensors[key] = { ...data, ts: new Date() };
+  updateSensorCard(key);
+  appendLog(data);
+  document.getElementById('sensor-count').textContent = Object.keys(sensors).length + ' ACTIVE';
+}
+
+function updateSensorCard(key) {
+  const s = sensors[key];
+  const noEl = document.getElementById('no-sensors');
+  if (noEl) noEl.remove();
+
+  let card = document.getElementById('sc-' + key.replace(/[^a-z0-9]/gi,'_'));
+  if (!card) {
+    card = document.createElement('div');
+    card.className = 'sensor-card';
+    card.id = 'sc-' + key.replace(/[^a-z0-9]/gi,'_');
+    document.getElementById('sensor-grid').appendChild(card);
+  }
+
+  const val = typeof s.value === 'number' ? s.value.toFixed(2) : s.value;
+  const timeStr = s.ts.toTimeString().substring(0,8);
+  const statusCls = s.status === 'ok' ? 'ok' : s.status === 'warn' ? 'warn' : 'error';
+
+  card.innerHTML = `
+    <div class="sc-name">${s.sensor_id}</div>
+    <div class="sc-metric">${s.metric}</div>
+    <div class="sc-value">${val}</div>
+    <div class="sc-unit">${s.unit || ''}</div>
+    <div class="sc-time">${timeStr}</div>
+    <span class="sc-status ${statusCls}">${s.status || 'ok'}</span>
+  `;
+
+  card.classList.add('updated');
+  setTimeout(() => card.classList.remove('updated'), 600);
+}
+
+function appendLog(data) {
+  const logEl = document.getElementById('event-log');
+  const empty = document.getElementById('log-empty');
+  if (empty) empty.remove();
+
+  logCount++;
+  const entries = logEl.querySelectorAll('.log-entry');
+  if (entries.length >= MAX_LOG) entries[entries.length - 1].remove();
+
+  const timeStr = new Date().toTimeString().substring(0,8);
+  const val = typeof data.value === 'number' ? data.value.toFixed(3) : data.value;
+
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `
+    <span class="log-time">${timeStr}</span>
+    <span class="log-sensor">${data.sensor_id}</span>
+    <span class="log-metric">${data.metric}</span>
+    <span class="log-val">${val}<span>${data.unit ? ' '+data.unit : ''}</span></span>
+  `;
+  logEl.insertBefore(entry, logEl.firstChild);
+}
+
+function clearLog() {
+  document.getElementById('event-log').innerHTML = '<div id="log-empty">// CLEARED</div>';
+  logCount = 0;
+}
+
+// ── Alert from automation engine ───────────────────────────────────────────
+function handleAlert(data) {
+  showToast('⚡ ' + data.message, 'alert');
+}
+
+// ── Rules CRUD ─────────────────────────────────────────────────────────────
+async function loadRules() {
+  try {
+    const res = await fetch('/api/rules');
+    rules = await res.json();
+    renderRules();
+  } catch(e) {
+    showToast('Failed to load rules', 'error');
+  }
+}
+
+function renderRules() {
+  const tbody = document.getElementById('rules-tbody');
+  document.getElementById('rules-count').textContent = rules.length + ' RULE' + (rules.length !== 1 ? 'S' : '');
+
+  if (rules.length === 0) {
+    tbody.innerHTML = '<tr id="rules-empty-row"><td colspan="5">// NO RULES DEFINED</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rules.map(r => `
+    <tr>
+      <td style="color:var(--text3)">#${r.id}</td>
+      <td>
+        <span class="tok-sensor">${r.sensor}</span>
+        <span class="tok-attr">.${r.attribute}</span>
+        <span class="tok-op">${r.operator}</span>
+        <span class="tok-val">${r.threshold}</span>
+      </td>
+      <td><span class="tok-actuator">${r.actuator}</span></td>
+      <td><span class="tok-action">${r.action}</span></td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn-edit" onclick="startEdit(${r.id})">EDIT</button>
+        <button class="btn-danger" onclick="deleteRule(${r.id})">DEL</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+function openModal(id) {
+  editingId = id || null;
+  const isEdit = !!id;
+
+  if (isEdit) {
+    const r = rules.find(x => x.id === id);
+    document.getElementById('f-sensor').value    = r.sensor;
+    document.getElementById('f-attribute').value = r.attribute;
+    document.getElementById('f-operator').value  = r.operator;
+    document.getElementById('f-threshold').value = r.threshold;
+    document.getElementById('f-actuator').value  = r.actuator;
+    document.getElementById('f-action').value    = r.action;
+    document.getElementById('modal-title').textContent = 'EDIT RULE #' + id;
+    document.getElementById('modal-submit-btn').textContent = 'UPDATE RULE';
+    document.getElementById('modal-submit-btn').className  = 'btn btn-update';
+  } else {
+    ['f-sensor','f-attribute','f-threshold','f-actuator','f-action'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-operator').value = '>';
+    document.getElementById('modal-title').textContent = 'NEW RULE';
+    document.getElementById('modal-submit-btn').textContent = 'ADD RULE';
+    document.getElementById('modal-submit-btn').className  = 'btn btn-primary';
+  }
+
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  editingId = null;
+}
+
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function startEdit(id) { openModal(id); }
+
+async function submitRule() {
+  const body = {
+    sensor:    document.getElementById('f-sensor').value.trim(),
+    attribute: document.getElementById('f-attribute').value.trim(),
+    operator:  document.getElementById('f-operator').value,
+    threshold: parseFloat(document.getElementById('f-threshold').value),
+    actuator:  document.getElementById('f-actuator').value.trim(),
+    action:    document.getElementById('f-action').value.trim(),
+  };
+
+  if (!body.sensor || !body.attribute || !body.actuator || !body.action || isNaN(body.threshold)) {
+    showToast('All fields are required', 'error');
+    return;
+  }
+
+  try {
+    const url    = editingId ? `/api/rules/${editingId}` : '/api/rules';
+    const method = editingId ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error();
+    showToast(editingId ? 'Rule updated' : 'Rule created');
+    closeModal();
+    loadRules();
+  } catch(e) {
+    showToast('Failed to save rule', 'error');
+  }
+}
+
+async function deleteRule(id) {
+  if (!confirm(`Delete rule #${id}?`)) return;
+  try {
+    const res = await fetch(`/api/rules/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error();
+    showToast('Rule deleted');
+    loadRules();
+  } catch(e) {
+    showToast('Failed to delete rule', 'error');
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+loadRules();
+</script>
+</body>
+</html>
