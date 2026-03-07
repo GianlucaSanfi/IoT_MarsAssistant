@@ -1,0 +1,44 @@
+version: '3.9'
+
+services:
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: iot
+      POSTGRES_PASSWORD: iot
+      POSTGRES_DB: iotdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  server-module:
+    build: ./server-module
+    container_name: server-module
+    depends_on:
+      - rabbitmq
+
+  logic-module:
+    build: ./logic-module
+    container_name: logic-module
+    ports:
+      - "8000:8000"
+    depends_on:
+      - rabbitmq
+      - postgres
+
+  rule-engine:
+    build: ./rule-engine
+    container_name: rule-engine
+    depends_on:
+      - rabbitmq
+      - postgres
