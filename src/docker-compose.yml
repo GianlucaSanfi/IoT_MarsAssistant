@@ -27,18 +27,18 @@ services:
     depends_on:
       - rabbitmq
 
-  logic-module:
-    build: ./logic-module
-    container_name: logic-module
+  frontend-module:
+    build: ./frontend-module
+    container_name: frontend-module
     ports:
       - "8000:8000"
     depends_on:
       - rabbitmq
       - postgres
 
-  rule-engine:
-    build: ./rule-engine
-    container_name: rule-engine
+  automation-engine:
+    build: ./automation-engine
+    container_name: automation-engine
     depends_on:
       - rabbitmq
       - postgres
