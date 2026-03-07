@@ -1,14 +1,31 @@
-version: '3.9'
-
 services:
 
+  # ---------------------------------------------------------------------------
+  # Message Broker
+  # ---------------------------------------------------------------------------
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
+    restart: unless-stopped
     ports:
       - "5672:5672"
       - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
+  # ---------------------------------------------------------------------------
+  # Database
+  # ---------------------------------------------------------------------------
   postgres:
     image: postgres:15
     container_name: postgres
@@ -21,13 +38,9 @@ services:
     volumes:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
 
-  server-module:
-    build: ./server-module
-    container_name: server-module
-    depends_on:
-      - rabbitmq
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+  # ---------------------------------------------------------------------------
+  # Core Modules
+  # ---------------------------------------------------------------------------
 
   frontend-module:
     build: ./frontend-module
@@ -44,3 +57,63 @@ services:
     depends_on:
       - rabbitmq
       - postgres
+
+  # ---------------------------------------------------------------------------
+  # Ingestion System (Ex-standalone)
+  # ---------------------------------------------------------------------------
+  sensor_poller:
+    build:
+      context: ./server-module
+      dockerfile: Dockerfile
+    container_name: sensor_poller
+    restart: unless-stopped
+    command: ["python", "sensor_poller.py"]
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      API_BASE_URL: ${API_BASE_URL:-http://host.docker.internal:8080}
+      SENSOR_POLL_INTERVAL_SEC: ${SENSOR_POLL_INTERVAL_SEC:-10}
+      SENSOR_POLL_TIMEOUT_SEC:  ${SENSOR_POLL_TIMEOUT_SEC:-5}
+      PUBLISHER_TYPE: rabbitmq
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-telemetry}
+      RABBITMQ_SENSOR_ROUTING_KEY: ${RABBITMQ_SENSOR_ROUTING_KEY:-sensors.normalized}
+      RABBITMQ_STARTUP_RETRY_DELAY_SEC: 3
+      RABBITMQ_STARTUP_MAX_RETRIES: 20
+
+  telemetry_listener:
+    build:
+      context: ./server-module
+      dockerfile: Dockerfile
+    container_name: telemetry_listener
+    restart: unless-stopped
+    command: ["python", "telemetry_listener.py"]
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      API_BASE_URL: ${API_BASE_URL:-http://host.docker.internal:8080}
+      TELEMETRY_RECONNECT_DELAY_SEC: ${TELEMETRY_RECONNECT_DELAY_SEC:-5}
+      TELEMETRY_STREAM_TIMEOUT_SEC:  ${TELEMETRY_STREAM_TIMEOUT_SEC:-30}
+      PUBLISHER_TYPE: rabbitmq
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-telemetry}
+      RABBITMQ_TELEMETRY_ROUTING_KEY: ${RABBITMQ_TELEMETRY_ROUTING_KEY:-telemetry.normalized}
+      RABBITMQ_STARTUP_RETRY_DELAY_SEC: 3
+      RABBITMQ_STARTUP_MAX_RETRIES: 20
+
+volumes:
+  rabbitmq_data:
