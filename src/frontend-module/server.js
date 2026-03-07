@@ -111,6 +111,8 @@ app.get('/api/rules', async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM rules ORDER BY id ASC');
     res.json(result.rows);
+    console.log(result, "ciaooooooooooooooo!");
+    ////////////////////////////////////////
   } catch (err) {
     res.status(500).json({ error: 'Database error' });
   }

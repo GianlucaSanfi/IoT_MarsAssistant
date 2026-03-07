@@ -145,7 +145,7 @@ async function startConsumer() {
             return;
           }
 
-          console.log(data, "FATTTOOOOOOOOOOOO!!!!!!");
+          //console.log(data, "FATTTOOOOOOOOOOOO!!!!!!");
           //////////////////////////////////////////////////////////
 
           const triggered = checkRules(data.sensor_id, data.metric, data.value);

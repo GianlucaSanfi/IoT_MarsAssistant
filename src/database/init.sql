@@ -1,7 +1,7 @@
 CREATE TABLE rules (
     id SERIAL PRIMARY KEY,
     sensor TEXT,
-    attribute TEXT
+    attribute TEXT,
     operator TEXT,
     threshold TEXT,
     actuator TEXT,

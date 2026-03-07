@@ -23,6 +23,9 @@ services:
       retries: 10
       start_period: 20s
 
+    networks:
+      - iot-net
+
   # ---------------------------------------------------------------------------
   # Database
   # ---------------------------------------------------------------------------
@@ -37,6 +40,8 @@ services:
       - "5432:5432"
     volumes:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - iot-net
 
   # ---------------------------------------------------------------------------
   # Core Modules
@@ -50,6 +55,14 @@ services:
     depends_on:
       - rabbitmq
       - postgres
+    environment:
+      DB_HOST: postgres
+      DB_USER: iot
+      DB_PASSWORD: iot
+      DB_NAME: iotdb
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    networks:
+      - iot-net
 
   automation-engine:
     build: ./automation-engine
@@ -57,6 +70,14 @@ services:
     depends_on:
       - rabbitmq
       - postgres
+    environment:
+      DB_HOST: postgres
+      DB_USER: iot
+      DB_PASSWORD: iot
+      DB_NAME: iotdb
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    networks:
+      - iot-net
 
   # ---------------------------------------------------------------------------
   # Ingestion System (Ex-standalone)
@@ -88,6 +109,9 @@ services:
       RABBITMQ_STARTUP_RETRY_DELAY_SEC: 3
       RABBITMQ_STARTUP_MAX_RETRIES: 20
 
+    networks:
+      - iot-net
+
   telemetry_listener:
     build:
       context: ./server-module
@@ -114,6 +138,14 @@ services:
       RABBITMQ_TELEMETRY_ROUTING_KEY: ${RABBITMQ_TELEMETRY_ROUTING_KEY:-telemetry.normalized}
       RABBITMQ_STARTUP_RETRY_DELAY_SEC: 3
       RABBITMQ_STARTUP_MAX_RETRIES: 20
+    
+    networks:
+      - iot-net
 
 volumes:
   rabbitmq_data:
+
+networks:
+  iot-net:
+    driver: bridge
+    name: iot-net
