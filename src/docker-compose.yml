@@ -26,6 +26,8 @@ services:
     container_name: server-module
     depends_on:
       - rabbitmq
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   frontend-module:
     build: ./frontend-module
