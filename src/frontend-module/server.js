@@ -21,6 +21,7 @@ const db = new Pool({
 });
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://rabbitmq';
+const SIMULATOR_URL = process.env.API_BASE_URL || 'http://simulator:8080';
 
 // ─── WebSocket broadcast ──────────────────────────────────────────────────
 const clients = new Set();
@@ -117,6 +118,12 @@ async function startRabbitMQConsumer() {
                 lastChange: new Date().toISOString()
               };
               console.log(`[ACT] ${actuator} → ${action} (rule #${ruleId})`);
+              // Forward command to simulator
+              fetch(`${SIMULATOR_URL}/api/actuators/${actuator}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ state: action })
+              }).catch(err => console.error(`[ACT] Failed to forward to simulator: ${err.message}`));
               // Broadcast to frontend via WebSocket
               broadcast({ type: 'actuator_update', payload: { id: actuator, ...actuatorState[actuator] } });
             }
@@ -159,13 +166,23 @@ app.get('/actuators', (req, res) => {
   res.json(result);
 });
 
-app.post('/actuators/:id', (req, res) => {
+app.post('/actuators/:id', async (req, res) => {
   const { id } = req.params;
   const { state } = req.body;
   if (!ACTUATOR_IDS.includes(id)) return res.status(404).json({ error: 'Unknown actuator' });
   if (state !== 'ON' && state !== 'OFF') return res.status(400).json({ error: 'State must be ON or OFF' });
   actuatorState[id] = { state, triggeredBy: 'Manual override', lastChange: new Date().toISOString() };
   console.log(`[ACT] ${id} → ${state}`);
+  // Forward command to simulator
+  try {
+    await fetch(`${SIMULATOR_URL}/api/actuators/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state })
+    });
+  } catch (err) {
+    console.error(`[ACT] Failed to forward to simulator: ${err.message}`);
+  }
   res.json({ id, ...actuatorState[id] });
 });
 
