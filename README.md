@@ -1,9 +1,25 @@
-# IoT_MarsAssistant
-Containerized  application for collecting multiple heterogeneous source data, live monitoring and automation of tasks with simple If-Then rules to modify actuators status.  
+```markdown
+# MARS ASSISTANT
+Containerized application for collecting heterogeneous IoT sensor data, live monitoring and automation of Mars habitat environment using simple IF-THEN rules to control actuators.
 
+## Run
 
-##RUN:  
-from __src__  
+```bash
+cd src
+docker compose up -d
 ```
-    docker compose up --build
+
+Open [http://localhost:8000](http://localhost:8000)
+
+## Stop
+
+```bash
+docker compose down
+```
+
+## Rebuild (after code changes)
+
+```bash
+docker compose up --build -d
+```
 ```
