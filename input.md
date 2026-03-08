@@ -12,7 +12,7 @@ The platform is built on an event-driven architecture using RabbitMQ as the mess
 
 ### Sensors
 
-1. As a user, I want to view a specific sensor state in a dedicated widget that updates in real time, so that I can monitor a specific environmental parameter.
+1. As a user, I want to click on a sensor widget to open a dedicated detail view showing the current state, metrics, and recent log, so that I can monitor a specific environmental parameter in depth.
 2. As a user, I want to view all sensors' states in a unified dashboard with live updates, so that I can have a complete overview of the Mars habitat environment at a glance.
 3. As a user, I want to be notified when a sensor status is "warning", so that I can react promptly to dangerous conditions.
 
