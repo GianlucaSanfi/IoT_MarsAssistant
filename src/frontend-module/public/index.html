@@ -161,14 +161,14 @@ body::after {
 .divider-line { flex: 1; height: 1px; background: var(--border); }
 
 /* SENSOR GRID */
-.sensor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 24px; padding: 8px; margin: -8px -8px 16px -8px; }
+.sensor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-bottom: 24px; padding: 8px; margin: -8px -8px 16px -8px; }
 
 .sensor-card {
   background: var(--card); border: 1px solid var(--border);
   border-radius: 8px; padding: 16px; position: relative;
   transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
   box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.7);
-  height: 230px; display: flex; flex-direction: column;
+  height: 260px; display: flex; flex-direction: column;
   overflow: hidden;
 }
 .sensor-card::before {
@@ -965,10 +965,19 @@ function updateSensorWidget(sensorId, value, unit, metric, status) {
       const m = metrics[k];
       const v = typeof m.value === 'number' ? m.value.toFixed(2) : m.value;
       const isStr = typeof m.value === 'string';
-      const sz = isStr ? '11px' : valueSize;
+      // Scale font down for long numbers to prevent wrapping
+      let sz;
+      if (isStr) {
+        sz = '11px';
+      } else {
+        const len = String(v).length;
+        if (count === 1) sz = '28px';
+        else if (count === 2) sz = len > 6 ? '16px' : '22px';
+        else sz = len > 6 ? '12px' : len > 4 ? '14px' : '16px';
+      }
       return `
         <div class="metric-item">
-          <div class="metric-value updated" style="font-size:${sz}">${v}</div>
+          <div class="metric-value updated" style="font-size:${sz};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v}</div>
           <div class="metric-label">${m.unit || ''}</div>
           <div class="metric-name">${k}</div>
         </div>`;
@@ -1263,7 +1272,6 @@ function handleIncomingEvent(raw) {
   if (raw.type === 'actuator_update' && raw.payload) {
     const { id, state, triggeredBy } = raw.payload;
     if (id) updateActuatorWidget(id, state, triggeredBy || 'Automation rule');
-    loadRules();
     return;
   }
 
