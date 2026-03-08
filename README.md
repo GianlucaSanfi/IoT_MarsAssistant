@@ -15,6 +15,11 @@ Open [http://localhost:8000](http://localhost:8000)
 ```bash
 docker compose down
 ```
+### NOTE:  
+to delete the database rules (volumes)
+```bash
+docker compose down -v
+```
 
 ## Rebuild (after code changes)
 
