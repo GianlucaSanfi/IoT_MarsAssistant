@@ -45,7 +45,10 @@ function evaluateRule(rule, sensorId, attribute, value) {
   if (isNaN(v) || isNaN(threshold)) return false;
 
   switch (rule.operator) {
-    case '>':  return v > threshold;
+    case '>':  
+      //console.log(v,threshold, "OCCHIO");
+      ////////////////////////////////////////////////
+      return v > threshold;
     case '<':  return v < threshold;
     case '>=': return v >= threshold;
     case '<=': return v <= threshold;
@@ -132,6 +135,7 @@ async function startConsumer() {
       // Durable queue bound to sensors.normalized
       const q = await channel.assertQueue('automation-engine', { exclusive: false, durable: true });
       await channel.bindQueue(q.queue, sensorExchange, 'sensors.normalized');
+      await channel.bindQueue(q.queue, sensorExchange, 'telemetry.normalized');
 
       console.log(`[AMQP] Connected. Consuming from exchange "${sensorExchange}" (sensors.normalized)`);
 
@@ -140,6 +144,9 @@ async function startConsumer() {
 
         try {
           const data = JSON.parse(msg.content.toString());
+          //if (data.sensor_id == "solar_array" || data.sensor_id == "radiation" || data.sensor_id == "life_support")
+          //  console.log(data, "TELEMETRYYYYYYYYYYYYY");
+          ////////////////////////////////////////
 
           if (data.sensor_id === undefined || data.metric === undefined || data.value === undefined) {
             console.warn('[MSG] Skipping message with missing fields:', data);
