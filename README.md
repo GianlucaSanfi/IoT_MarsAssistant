@@ -1,4 +1,3 @@
-```markdown
 # MARS ASSISTANT
 Containerized application for collecting heterogeneous IoT sensor data, live monitoring and automation of Mars habitat environment using simple IF-THEN rules to control actuators.
 
@@ -21,5 +20,4 @@ docker compose down
 
 ```bash
 docker compose up --build -d
-```
 ```
