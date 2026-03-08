@@ -8,5 +8,6 @@ CREATE TABLE rules (
     actuator TEXT,
     action TEXT,
     enabled BOOLEAN DEFAULT true,
-    last_triggered TIMESTAMPTZ
+    last_triggered TIMESTAMPTZ,
+    last_action TEXT
 );
