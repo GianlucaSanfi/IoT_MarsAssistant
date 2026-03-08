@@ -1263,6 +1263,7 @@ function handleIncomingEvent(raw) {
   if (raw.type === 'actuator_update' && raw.payload) {
     const { id, state, triggeredBy } = raw.payload;
     if (id) updateActuatorWidget(id, state, triggeredBy || 'Automation rule');
+    loadRules();
     return;
   }
 
