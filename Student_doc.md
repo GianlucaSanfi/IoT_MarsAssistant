@@ -199,7 +199,7 @@ A Node.js + Express container that acts as the backend gateway between RabbitMQ 
 - US-15: System connection status indicator
 
 ### PORTS: 
-8000 (HTTP + WebSocket)
+8000:8000 (HTTP + WebSocket)
 
 ### PERSISTENCE EVALUATION
 The container is mostly stateless. The sensor cache (`sensorCache`) and actuator state (`actuatorState`) are maintained in-memory and lost on restart — rebuilt automatically within seconds as new data arrives from RabbitMQ. Automation rules are persisted in PostgreSQL.
@@ -268,7 +268,7 @@ Standard PostgreSQL 15 container used as the persistent storage layer for automa
 - US-14: Last triggered / last action — `last_triggered` and `last_action` written on each rule trigger
 
 ### PORTS: 
-5432
+5432:5432
 
 ### PERSISTENCE EVALUATION
 Full persistence via Docker volume `postgres_data` mounted at `/var/lib/postgresql/data`. All automation rules, their enabled state, `last_triggered` timestamps, and `last_action` strings survive container restarts.
