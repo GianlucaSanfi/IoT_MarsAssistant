@@ -171,4 +171,4 @@ CREATE TABLE rules (
 - Only rules with `enabled = true` are evaluated.
 - When a rule condition is met, the engine publishes an action message to the RabbitMQ `actions` exchange.
 - The frontend module consumes the `actions` exchange, updates the actuator state in memory, and broadcasts the update to all connected clients via WebSocket.
-- The `last_triggered` timestamp is updated in the database each time a rule fires.
+- The `last_triggered` timestamp and `last_action` string are updated in the database each time a rule fires.
