@@ -6,7 +6,7 @@ The platform is composed of 6 Docker containers communicating over a private net
 
 - **sensor_poller**: Python-based data ingestion layer for rest sensors data normalization;  
 - **telemetry_listener**: Python-based ingestion layer for telemetry streams sensors data normalization;  
-(__sensor_poller__ and __telemetry_listener__ form the ingestion-services on which the sensors/actuators infrastructure relies on);
+(__sensor_poller__ and __telemetry_listener__ form the ingestion-services on which the sensors/actuators infrastructure relies on)
 - **rabbitmq**: Message broker providing decoupled, event-driven communication via topic exchanges;
 - **automation-engine**: Node.js rule evaluation engine that subscribes to RabbitMQ sensor events and sends actuator commands events when a rule is triggered; 
 - **frontend-module**: Node.js/Express backend gateway that bridges RabbitMQ to the browser via WebSocket and exposes the REST API;
