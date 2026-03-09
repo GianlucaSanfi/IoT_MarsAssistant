@@ -164,6 +164,7 @@ The container is mostly stateless. The sensor cache (`sensorCache`) and actuator
 ### EXTERNAL SERVICES CONNECTIONS
 - RabbitMQ — subscribes to `telemetry` exchange (queue: `frontend-telemetry`, routing keys: `sensors.normalized`, `telemetry.normalized`), `actions` exchange (routing key: `#`), and `alerts` exchange (fanout)
 - PostgreSQL — reads and writes automation rules via the `/api/rules` REST API
+- Mars IoT Simulator (`http://simulator:8080`) — forwards actuator commands via POST `/api/actuators/:id`
 
 ### MICROSERVICES:
 
