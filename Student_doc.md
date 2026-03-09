@@ -254,7 +254,7 @@ On load, connects to `ws://host:8000` and receives an initial snapshot of the fu
 
 ---
 
-## (5) CONTAINER_NAME: postgres
+## (6) CONTAINER_NAME: postgres
 
 ### DESCRIPTION: 
 Standard PostgreSQL 15 container used as the persistent storage layer for automation rules. Initialized on first start with `init.sql` which creates the `rules` table schema.
