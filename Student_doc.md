@@ -4,11 +4,11 @@ MARS ASSISTANT is a distributed, event-driven IoT platform designed to monitor a
 
 The platform is composed of five Docker containers communicating over a private network:
 
-- **ingestion_services** — Python-based data ingestion layer (sensor_poller + telemetry_listener)
-- **rabbitmq** — Message broker providing decoupled, event-driven communication via topic exchanges
-- **automation-engine** — Node.js rule evaluation engine that subscribes to sensor events and triggers actuator commands
-- **frontend-module** — Node.js/Express backend gateway that bridges RabbitMQ to the browser via WebSocket and exposes the REST API
-- **postgres** — PostgreSQL database for persistent storage of automation rules
+- **ingestion_services**: Python-based data ingestion layer (sensor_poller + telemetry_listener)
+- **rabbitmq**: Message broker providing decoupled, event-driven communication via topic exchanges
+- **automation-engine**: Node.js rule evaluation engine that subscribes to sensor events and triggers actuator commands
+- **frontend-module**: Node.js/Express backend gateway that bridges RabbitMQ to the browser via WebSocket and exposes the REST API
+- **postgres**: PostgreSQL database for persistent storage of automation rules
 
 All inter-service communication passes through RabbitMQ. The only direct HTTP call is from the frontend-module to the simulator's actuator REST API. The sensor cache is maintained in-memory in the frontend-module and rebuilt automatically on restart. The system is fully containerized and started with a single `docker compose up` command.
 
@@ -112,8 +112,8 @@ None exposed: communicates only via RabbitMQ and PostgreSQL
 The container is stateless. All rule definitions, enabled flags, and `last_triggered` timestamps are persisted in the PostgreSQL database. The engine loads only enabled rules (`WHERE enabled = true`) and refreshes them every 5 seconds (`RULES_REFRESH_MS`).
 
 ### EXTERNAL SERVICES CONNECTIONS
-- RabbitMQ — subscribes to `telemetry` exchange (queue: `automation-engine`, routing keys: `sensors.normalized`, `telemetry.normalized`), publishes to `actions` exchange
-- PostgreSQL — reads enabled rules, writes `last_triggered` on each rule trigger
+- RabbitMQ: subscribes to `telemetry` exchange (queue: `automation-engine`, routing keys: `sensors.normalized`, `telemetry.normalized`), publishes to `actions` exchange
+- PostgreSQL: reads enabled rules, writes `last_triggered` on each rule trigger
 
 ### MICROSERVICES:
 
@@ -162,8 +162,8 @@ A Node.js + Express container that acts as the backend gateway between RabbitMQ 
 The container is mostly stateless. The sensor cache (`sensorCache`) and actuator state (`actuatorState`) are maintained in-memory and lost on restart — rebuilt automatically within seconds as new data arrives from RabbitMQ. Automation rules are persisted in PostgreSQL.
 
 ### EXTERNAL SERVICES CONNECTIONS
-- RabbitMQ — subscribes to `telemetry` exchange (queue: `frontend-telemetry`, routing keys: `sensors.normalized`, `telemetry.normalized`), `actions` exchange (routing key: `#`), and `alerts` exchange (fanout)
-- PostgreSQL — reads and writes automation rules via the `/api/rules` REST API
+- RabbitMQ: subscribes to `telemetry` exchange (queue: `frontend-telemetry`, routing keys: `sensors.normalized`, `telemetry.normalized`), `actions` exchange (routing key: `#`), and `alerts` exchange (fanout)
+- PostgreSQL: reads and writes automation rules via the `/api/rules` REST API
 - Mars IoT Simulator (`http://simulator:8080`) — forwards actuator commands via POST `/api/actuators/:id`
 
 ### MICROSERVICES:
@@ -195,7 +195,7 @@ On startup, binds HTTP and WebSocket server on port 8000 and connects to RabbitM
 #### MICROSERVICE: dashboard
 - TYPE: frontend
 - DESCRIPTION: Single-page HTML/CSS/JS application served as a static file by the Node.js server. Connects to the WebSocket server to receive live sensor and actuator updates. Provides the sensor grid, actuator control panel, and automation rules management interface.
-- PORTS: None — served as static file from port 8000
+- PORTS: None: served as static file from port 8000
 - TECHNOLOGICAL SPECIFICATION:
 Vanilla HTML5, CSS3, JavaScript. No frontend framework. Uses the browser-native WebSocket API and `fetch` for REST calls. Fonts: Orbitron, Exo 2, Share Tech Mono (Google Fonts).
 - SERVICE ARCHITECTURE:
@@ -217,9 +217,9 @@ On load, connects to `ws://host:8000` and receives an initial snapshot of the fu
 Standard PostgreSQL 15 container used as the persistent storage layer for automation rules. Initialized on first start with `init.sql` which creates the `rules` table schema.
 
 ### USER STORIES:
-- US-9: Create rule — persisted to DB
-- US-10: Edit rule — updated in DB
-- US-11: Delete rule — removed from DB
+- US-9: Create rule - persisted to DB
+- US-10: Edit rule - updated in DB
+- US-11: Delete rule - removed from DB
 - US-12: View rules — read from DB
 - US-13: Disable rule — `enabled` flag updated in DB
 - US-14: Last triggered / last action — `last_triggered` and `last_action` written on each rule trigger
