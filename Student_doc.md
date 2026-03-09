@@ -2,13 +2,15 @@
 
 MARS ASSISTANT is a distributed, event-driven IoT platform designed to monitor and automate the environmental control of a Mars habitat. The system ingests real-time data from 15 environmental sensors (8 REST-polled and 7 telemetry streams), evaluates automation rules, controls 4 physical actuators, and presents a live web-based dashboard to the mission crew.
 
-The platform is composed of five Docker containers communicating over a private network:
+The platform is composed of 6 Docker containers communicating over a private network:
 
-- **ingestion_services**: Python-based data ingestion layer (sensor_poller + telemetry_listener)
-- **rabbitmq**: Message broker providing decoupled, event-driven communication via topic exchanges
-- **automation-engine**: Node.js rule evaluation engine that subscribes to sensor events and triggers actuator commands
-- **frontend-module**: Node.js/Express backend gateway that bridges RabbitMQ to the browser via WebSocket and exposes the REST API
-- **postgres**: PostgreSQL database for persistent storage of automation rules
+- **sensor_poller**: Python-based data ingestion layer for rest sensors data normalization;  
+- **telemetry_listener**: Python-based ingestion layer for telemetry streams sensors data normalization;  
+(__sensor_poller__ and __telemetry_listener__ form the ingestion-services on which the sensors/actuators infrastructure relies on);
+- **rabbitmq**: Message broker providing decoupled, event-driven communication via topic exchanges;
+- **automation-engine**: Node.js rule evaluation engine that subscribes to RabbitMQ sensor events and sends actuator commands events when a rule is triggered; 
+- **frontend-module**: Node.js/Express backend gateway that bridges RabbitMQ to the browser via WebSocket and exposes the REST API;
+- **postgres**: PostgreSQL database for persistent storage of automation rules;
 
 All inter-service communication passes through RabbitMQ. The only direct HTTP call is from the frontend-module to the simulator's actuator REST API. The sensor cache is maintained in-memory in the frontend-module and rebuilt automatically on restart. The system is fully containerized and started with a single `docker compose up` command.
 
@@ -50,10 +52,10 @@ All inter-service communication passes through RabbitMQ. The only direct HTTP ca
 
 # CONTAINERS:
 
-## CONTAINER_NAME: ingestion_services
+## (1) CONTAINER_NAME: sensor_poller
 
 ### DESCRIPTION: 
-A Docker container based on Python 3.12-slim that acts as the data ingestion layer of the system. It is designed to run the two core processes: a periodic sensor polling service and a real-time telemetry (SSE) listener. Both processes fetch data from the IoT simulator container, normalize the semi-structured JSON payloads into a flat standard format, and publish the records to RabbitMQ as a server broker.
+A Docker container based on Python 3.12-slim that acts as the data ingestion layer of the system. It is designed to run the periodic sensor polling service. It fetches data from the IoT simulator container, normalize the semi-structured JSON payloads into a flat standard format, and publish the records to RabbitMQ as a server broker.
 
 ### USER STORIES:
 - US-2: Live sensor dashboard — data is continuously ingested and forwarded
@@ -67,9 +69,8 @@ None exposed: internal communication only via RabbitMQ (AMQP)
 The container is completely stateless. No data is persisted locally on the container's file system. All fetched, parsed, and normalized data is immediately forwarded to RabbitMQ
 
 ### EXTERNAL SERVICES CONNECTIONS
-* External REST API: Connects via HTTP/GET to `http://simulator:8080` to fetch available sensors and topics, and retrieves data via standard endpoints and SSE streams
-* RabbitMQ: Connects to the AMQP message broker to publish normalized metrics on exchange `telemetry`, routing keys `sensors.normalized` and `telemetry.normalized`
-
+* External REST API: Connects via HTTP/GET to `http://simulator:8080` to fetch available sensors and topics, and retrieves data via standard REST endpoints
+* RabbitMQ: Connects to the AMQP message broker to publish normalized metrics on exchange `telemetry`, routing key `sensors.normalized`
 ### MICROSERVICES:
 
 #### MICROSERVICE: sensor_poller
@@ -80,6 +81,30 @@ The container is completely stateless. No data is persisted locally on the conta
 Written in Python 3.12. Uses the `requests` library for synchronous HTTP GET requests and `pika` for AMQP communication with RabbitMQ.
 - SERVICE ARCHITECTURE: 
 Operates on a continuous polling loop with a configurable sleep interval (default 10 seconds, via `SENSOR_POLL_INTERVAL_SEC` env var). In each cycle it queries the simulator for active sensor IDs, fetches data for each ID sequentially, normalizes the responses into a unified event schema, and publishes to RabbitMQ on routing key `sensors.normalized`.
+
+---
+
+## (2) CONTAINER_NAME: telemetry_listener
+
+### DESCRIPTION: 
+A Docker container based on Python 3.12-slim that acts as the data ingestion layer of the system. It is designed to run the real-time telemetry (SSE) listener. It fetches data from the IoT simulator container, normalize the semi-structured JSON payloads into a flat standard format, and publish the records to RabbitMQ as a server broker.
+
+### USER STORIES:
+- US-2: Live sensor dashboard — data is continuously ingested and forwarded
+- US-3: Warning notifications — status field is normalized and forwarded
+- US-15: System connection status — ingestion feeds the live pipeline
+
+### PORTS: 
+None exposed: internal communication only via RabbitMQ (AMQP)
+
+### PERSISTENCE EVALUATION
+The container is completely stateless. No data is persisted locally on the container's file system. All fetched, parsed, and normalized data is immediately forwarded to RabbitMQ
+
+### EXTERNAL SERVICES CONNECTIONS
+* External REST API: Connects via HTTP/GET to `http://simulator:8080` to fetch available sensors and topics, and retrieves data via SSE streams
+* RabbitMQ: Connects to the AMQP message broker to publish normalized metrics on exchange `telemetry`, routing key `telemetry.normalized`
+
+### MICROSERVICES:
 
 #### MICROSERVICE: telemetry_listener
 - TYPE: backend
@@ -92,7 +117,26 @@ Multi-threaded architecture. On startup, fetches the list of available telemetry
 
 ---
 
-## CONTAINER_NAME: automation-engine
+## (3) CONTAINER_NAME: rabbitmq
+
+### DESCRIPTION: 
+A Docker container exposing RabbitMQ message broker.
+
+### USER STORIES:
+(1 - 15)
+### PORTS: 
+5672:5672  
+15672:15672
+
+### PERSISTENCE EVALUATION
+The container does not require a Database.
+
+### EXTERNAL SERVICES CONNECTIONS
+The container exposes an endpoint from which connect and publish / subscribe to exchange messages through a unified channel.
+
+---
+
+## (4) CONTAINER_NAME: automation-engine
 
 ### DESCRIPTION: 
 A Node.js container that implements the automation rule engine. It subscribes to the RabbitMQ `telemetry` exchange, evaluates IF-THEN rules loaded from PostgreSQL against incoming sensor events, and publishes actuator command messages to the RabbitMQ `actions` exchange when a rule condition is satisfied.
@@ -132,8 +176,7 @@ On startup, waits 3 seconds for dependencies, then loads rules from DB and start
 
 ---
 
-
-## CONTAINER_NAME: frontend-module
+## (5) CONTAINER_NAME: frontend-module
 
 ### DESCRIPTION: 
 A Node.js + Express container that acts as the backend gateway between RabbitMQ and the browser. It subscribes to the `telemetry`, `actions`, and `alerts` RabbitMQ exchanges, maintains an in-memory sensor cache and actuator state, exposes a REST API for rules and actuator control, runs a WebSocket server to push live updates to connected browsers, and serves the static HTML/CSS/JS dashboard.
@@ -211,7 +254,7 @@ On load, connects to `ws://host:8000` and receives an initial snapshot of the fu
 
 ---
 
-## CONTAINER_NAME: postgres
+## (5) CONTAINER_NAME: postgres
 
 ### DESCRIPTION: 
 Standard PostgreSQL 15 container used as the persistent storage layer for automation rules. Initialized on first start with `init.sql` which creates the `rules` table schema.
