@@ -69,12 +69,6 @@ def normalize_sensor_responses(raw_responses: list[dict]) -> list[dict]:
         value      — valore numerico
         unit       — unità di misura
         status     — "ok" | "warning" | "unknown"
-
-    Strategie (in ordine):
-        1. Campi diretti metric/value/unit  → 1 record
-        2. Lista 'measurements'             → N record (uno per metrica)
-        3. Campi piatti via SENSOR_FLAT_FIELD_MAP → N record
-        4. Fallback                         → 1 record con valori None
     """
     normalized: list[dict] = []
 
@@ -118,11 +112,7 @@ def normalize_sensor_responses(raw_responses: list[dict]) -> list[dict]:
 
 def normalize_telemetry(raw_events: list[dict]) -> list[dict]:
     """
-    Normalizza una lista di payload SSE già deserializzati (dict) in record
-    piatti e uniformi.
-
-    Nota: accetta direttamente la lista di dict prodotta dal listener SSE
-    (non la stringa SSE grezza — quella viene parsata dal listener stesso).
+    Normalizza una lista di payload SSE in record piatti e uniformi.
 
     Schema output per ogni record:
         timestamp  — ISO 8601 string (UTC)
@@ -132,10 +122,6 @@ def normalize_telemetry(raw_events: list[dict]) -> list[dict]:
         unit       — unità di misura (None se non applicabile)
         status     — "ok" | "warning" | "unknown"
 
-    Strategie (in ordine):
-        1. Lista 'measurements'                    → N record
-        2. Campi piatti via TELEMETRY_FLAT_FIELD_MAP → N record
-        3. Fallback                                → 1 record con valori None
     """
     normalized: list[dict] = []
 
@@ -183,33 +169,3 @@ def _parse_timestamp(raw_ts: str | None) -> str | None:
         return datetime.fromisoformat(raw_ts).isoformat()
     except (ValueError, TypeError):
         return raw_ts
-
-
-# ---------------------------------------------------------------------------
-# Demo / test rapido
-# ---------------------------------------------------------------------------
-
-if __name__ == "__main__":
-    sample_sensors = [
-        {"sensor_id": "greenhouse_temperature", "captured_at": "2026-03-07T11:40:36+00:00",
-         "metric": "temperature_c", "value": 23.71, "unit": "C", "status": "ok"},
-        {"sensor_id": "hydroponic_ph", "captured_at": "2026-03-07T11:40:36+00:00",
-         "measurements": [{"metric": "ph", "value": 6.38, "unit": "pH"}], "status": "ok"},
-        {"sensor_id": "water_tank_level", "captured_at": "2026-03-07T11:40:36+00:00",
-         "level_pct": 69.36, "level_liters": 2774.4, "status": "ok"},
-    ]
-    print("=== SENSORI ===")
-    print(json.dumps(normalize_sensor_responses(sample_sensors), indent=2))
-
-    sample_telemetry = [
-        {"topic": "facility/solar_array", "event_time": "2026-03-07T12:00:00+00:00",
-         "power_kw": 42.5, "voltage_v": 380.0, "current_a": 111.8,
-         "cumulative_kwh": 1500.0, "status": "ok"},
-        {"topic": "facility/thermal_loop", "event_time": "2026-03-07T12:00:01+00:00",
-         "measurements": [
-             {"metric": "temperature_c", "value": 35.2, "unit": "°C"},
-             {"metric": "flow_l_min",    "value": 12.4,  "unit": "L/min"},
-         ], "status": "ok"},
-    ]
-    print("\n=== TELEMETRIA ===")
-    print(json.dumps(normalize_telemetry(sample_telemetry), indent=2))

@@ -2,20 +2,6 @@
 # =============================================================================
 # sensor_poller.py — Polling periodico dei sensori
 #
-# Avvio:
-#   python sensor_poller.py
-#   python sensor_poller.py --interval 30       # override intervallo
-#   python sensor_poller.py --publisher rabbitmq
-#
-# Comportamento:
-#   1. Recupera la lista dei sensori disponibili dall'API
-#   2. Per ogni sensore esegue una GET e raccoglie la risposta
-#   3. Normalizza i record con normalize.normalize_sensor_responses()
-#   4. Pubblica ogni record via publisher (print o RabbitMQ)
-#   5. Attende SENSOR_POLL_INTERVAL_SEC e ripete dal punto 2
-#
-# I sensori vengono re-fetchati ad ogni ciclo: se l'API aggiunge nuovi
-# sensori, vengono inclusi automaticamente al ciclo successivo.
 # =============================================================================
 
 from __future__ import annotations

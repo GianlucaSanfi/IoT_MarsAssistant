@@ -2,22 +2,6 @@
 # =============================================================================
 # telemetry_listener.py — Listener parallelo dei topic SSE di telemetria
 #
-# Avvio:
-#   python telemetry_listener.py
-#   python telemetry_listener.py --publisher rabbitmq
-#
-# Comportamento:
-#   1. Recupera la lista dei topic disponibili dall'API
-#   2. Avvia un thread dedicato per ogni topic
-#   3. Ogni thread crea il PROPRIO publisher (connessione RabbitMQ indipendente)
-#      → risolve il problema di thread-safety di pika.BlockingConnection
-#   4. Ogni thread si connette allo stream SSE e rimane in ascolto
-#      per tutti gli eventi che l'endpoint invia nel tempo
-#   5. Ad ogni evento ricevuto: normalizza → pubblica
-#   6. Se la connessione SSE cade, il thread si riconnette automaticamente
-#      dopo TELEMETRY_RECONNECT_DELAY_SEC secondi
-#
-# Gestione graceful shutdown: SIGINT / SIGTERM fermano tutti i thread.
 # =============================================================================
 
 from __future__ import annotations

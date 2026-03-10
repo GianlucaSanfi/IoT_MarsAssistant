@@ -29,10 +29,9 @@ TELEMETRY_RECONNECT_DELAY_SEC = _env_float("TELEMETRY_RECONNECT_DELAY_SEC",  5)
 TELEMETRY_STREAM_TIMEOUT_SEC  = _env_float("TELEMETRY_STREAM_TIMEOUT_SEC",  30)
 
 # --- Publisher ---
-# "print" | "rabbitmq"
-PUBLISHER_TYPE = _env_str("PUBLISHER_TYPE", "print")
+PUBLISHER_TYPE = _env_str("PUBLISHER_TYPE", "print")        # print for debugging
 
-# --- RabbitMQ (usato solo se PUBLISHER_TYPE == "rabbitmq") ---
+# --- RabbitMQ ---
 RABBITMQ_HOST     = _env_str("RABBITMQ_HOST",     "rabbitmq")
 RABBITMQ_PORT     = _env_int("RABBITMQ_PORT",      5672)
 RABBITMQ_VHOST    = _env_str("RABBITMQ_VHOST",    "/")

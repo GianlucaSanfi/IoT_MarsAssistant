@@ -7,7 +7,6 @@
 
 FROM python:3.12-slim
 
-# Non scrivere .pyc, log non bufferizzati (essenziale per docker logs)
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
@@ -18,8 +17,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copia il sorgente
-# COPY config.py normalize.py publisher.py sensor_poller.py telemetry_listener.py ./
 COPY . . 
 
-# Default: sensor poller — sovrascritto da docker-compose per telemetry_listener
 CMD ["python", "sensor_poller.py"]
